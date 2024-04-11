@@ -9,7 +9,10 @@
  */
 
 module.exports.routes = {
+  'GET /api/config': 'show-config',
+
   'POST /api/access-tokens': 'access-tokens/create',
+  'POST /api/access-tokens/exchange-using-oidc': 'access-tokens/exchange-using-oidc',
   'DELETE /api/access-tokens/me': 'access-tokens/delete',
 
   'GET /api/users': 'users/index',
@@ -52,6 +55,7 @@ module.exports.routes = {
   'POST /api/lists/:listId/cards': 'cards/create',
   'GET /api/cards/:id': 'cards/show',
   'PATCH /api/cards/:id': 'cards/update',
+  'POST /api/cards/:id/duplicate': 'cards/duplicate',
   'DELETE /api/cards/:id': 'cards/delete',
   'POST /api/cards/:cardId/memberships': 'card-memberships/create',
   'DELETE /api/cards/:cardId/memberships': 'card-memberships/delete',

@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
-import { Form, Grid, Header, Message } from 'semantic-ui-react';
+import { Button, Form, Grid, Header, Message } from 'semantic-ui-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faGitlab, faGoogle } from '@fortawesome/free-brands-svg-icons'
 import { useDidUpdate, usePrevious, useToggle } from '../../lib/hooks';
@@ -34,6 +34,21 @@ const createMessage = (error) => {
         type: 'error',
         content: 'common.invalidPassword',
       };
+    case 'Use single sign-on':
+      return {
+        type: 'error',
+        content: 'common.useSingleSignOn',
+      };
+    case 'Email already in use':
+      return {
+        type: 'error',
+        content: 'common.emailAlreadyInUse',
+      };
+    case 'Username already in use':
+      return {
+        type: 'error',
+        content: 'common.usernameAlreadyInUse',
+      };
     case 'Failed to fetch':
       return {
         type: 'warning',
@@ -53,7 +68,17 @@ const createMessage = (error) => {
 };
 
 const Login = React.memo(
-  ({ defaultData, isSubmitting, error, onAuthenticate, onMessageDismiss }) => {
+  ({
+    defaultData,
+    isSubmitting,
+    isSubmittingUsingOidc,
+    error,
+    withOidc,
+    isOidcEnforced,
+    onAuthenticate,
+    onAuthenticateUsingOidc,
+    onMessageDismiss,
+  }) => {
     const [t] = useTranslation();
     const wasSubmitting = usePrevious(isSubmitting);
 
@@ -89,8 +114,10 @@ const Login = React.memo(
     }, [onAuthenticate, data]);
 
     useEffect(() => {
-      emailOrUsernameField.current.focus();
-    }, []);
+      if (!isOidcEnforced) {
+        emailOrUsernameField.current.focus();
+      }
+    }, [isOidcEnforced]);
 
     useEffect(() => {
       if (wasSubmitting && !isSubmitting && error) {
@@ -141,40 +168,56 @@ const Login = React.memo(
                         onDismiss={onMessageDismiss}
                       />
                     )}
-                    <Form size="large" onSubmit={handleSubmit}>
-                      <div className={styles.inputWrapper}>
-                        <div className={styles.inputLabel}>{t('common.emailOrUsername')}</div>
-                        <Input
-                          fluid
-                          ref={emailOrUsernameField}
-                          name="emailOrUsername"
-                          value={data.emailOrUsername}
-                          readOnly={isSubmitting}
-                          className={styles.input}
-                          onChange={handleFieldChange}
+                    {!isOidcEnforced && (
+                      <Form size="large" onSubmit={handleSubmit}>
+                        <div className={styles.inputWrapper}>
+                          <div className={styles.inputLabel}>{t('common.emailOrUsername')}</div>
+                          <Input
+                            fluid
+                            ref={emailOrUsernameField}
+                            name="emailOrUsername"
+                            value={data.emailOrUsername}
+                            readOnly={isSubmitting}
+                            className={styles.input}
+                            onChange={handleFieldChange}
+                          />
+                        </div>
+                        <div className={styles.inputWrapper}>
+                          <div className={styles.inputLabel}>{t('common.password')}</div>
+                          <Input.Password
+                            fluid
+                            ref={passwordField}
+                            name="password"
+                            value={data.password}
+                            readOnly={isSubmitting}
+                            className={styles.input}
+                            onChange={handleFieldChange}
+                          />
+                        </div>
+                        <Form.Button
+                          primary
+                          size="large"
+                          icon="right arrow"
+                          labelPosition="right"
+                          content={t('action.logIn')}
+                          floated="right"
+                          loading={isSubmitting}
+                          disabled={isSubmitting || isSubmittingUsingOidc}
                         />
-                      </div>
-                      <div className={styles.inputWrapper}>
-                        <div className={styles.inputLabel}>{t('common.password')}</div>
-                        <Input.Password
-                          fluid
-                          ref={passwordField}
-                          name="password"
-                          value={data.password}
-                          readOnly={isSubmitting}
-                          className={styles.input}
-                          onChange={handleFieldChange}
-                        />
-                      </div>
-                      <Form.Button
-                        primary
-                        size="large"
-                        icon="right arrow"
-                        labelPosition="right"
-                        content={t('action.logIn')}
-                        floated="right"
-                        loading={isSubmitting}
-                        disabled={isSubmitting}
+                      </Form>
+                    )}
+                    {withOidc && (
+                      <Button
+                        type="button"
+                        fluid={isOidcEnforced}
+                        primary={isOidcEnforced}
+                        size={isOidcEnforced ? 'large' : undefined}
+                        icon={isOidcEnforced ? 'right arrow' : undefined}
+                        labelPosition={isOidcEnforced ? 'right' : undefined}
+                        content={t('action.logInWithSSO')}
+                        loading={isSubmittingUsingOidc}
+                        disabled={isSubmitting || isSubmittingUsingOidc}
+                        onClick={onAuthenticateUsingOidc}
                       />
                     </Form>
                     <hr style={{ width: "100%", margin: "120px 0 0 0" }} />
@@ -224,10 +267,16 @@ const Login = React.memo(
 );
 
 Login.propTypes = {
-  defaultData: PropTypes.object.isRequired, // eslint-disable-line react/forbid-prop-types
+  /* eslint-disable react/forbid-prop-types */
+  defaultData: PropTypes.object.isRequired,
+  /* eslint-enable react/forbid-prop-types */
   isSubmitting: PropTypes.bool.isRequired,
+  isSubmittingUsingOidc: PropTypes.bool.isRequired,
   error: PropTypes.object, // eslint-disable-line react/forbid-prop-types
+  withOidc: PropTypes.bool.isRequired,
+  isOidcEnforced: PropTypes.bool.isRequired,
   onAuthenticate: PropTypes.func.isRequired,
+  onAuthenticateUsingOidc: PropTypes.func.isRequired,
   onMessageDismiss: PropTypes.func.isRequired,
 };
 
