@@ -4,11 +4,17 @@ import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
 import { Button, Form, Grid, Header, Message } from 'semantic-ui-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faGitlab, faGoogle } from '@fortawesome/free-brands-svg-icons'
 import { useDidUpdate, usePrevious, useToggle } from '../../lib/hooks';
 import { Input } from '../../lib/custom-ui';
-
+import { Button } from 'semantic-ui-react';
 import { useForm } from '../../hooks';
 import { isUsername } from '../../utils/validator';
+import { ReactComponent as RedmineIcon } from '../../assets/icons/redmine-icon.svg';
+
+
+import Config from "../../constants/Config"
 
 import styles from './Login.module.scss';
 
@@ -213,7 +219,24 @@ const Login = React.memo(
                         disabled={isSubmitting || isSubmittingUsingOidc}
                         onClick={onAuthenticateUsingOidc}
                       />
-                    )}
+                    </Form>
+                    <hr style={{ width: "100%", margin: "120px 0 0 0" }} />
+                      <div className={styles.buttonsContainer}>
+                      <Button as='a' href={`${Config.SERVER_BASE_URL}/api/oauth/redmine`} className={styles.oauthButton}>
+                      <RedmineIcon style={{ marginRight: '5px', width: '15px', height: '15px' }} />
+                        Войти через 42team
+                      </Button>
+
+                      <Button as='a' href={`${Config.SERVER_BASE_URL}/api/oauth/gitlab`} className={styles.oauthButton}>
+                        <FontAwesomeIcon icon={faGitlab} style={{ marginRight: '5px' }} />
+                        Войти через git.hm
+                      </Button>
+                      <Button as='a' href={`${Config.SERVER_BASE_URL}/api/oauth/google`} className={styles.oauthButton}>
+                        <FontAwesomeIcon icon={faGoogle} style={{ marginRight: '5px' }} />
+                        Войти через Google
+                      </Button>
+                    </div>
+
                   </div>
                 </div>
               </Grid.Column>
@@ -228,7 +251,7 @@ const Login = React.memo(
           >
             <div className={styles.descriptionWrapperOverlay} />
             <div className={styles.descriptionWrapper}>
-              <Header inverted as="h1" content="Planka" className={styles.descriptionTitle} />
+              <Header inverted as="h1" content="TeamBoard" className={styles.descriptionTitle} />
               <Header
                 inverted
                 as="h2"

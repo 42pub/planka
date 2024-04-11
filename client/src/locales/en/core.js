@@ -11,7 +11,7 @@ export default {
 
   translation: {
     common: {
-      aboutPlanka: 'About Planka',
+      aboutPlanka: 'About TeamBoard',
       account: 'Account',
       actions: 'Actions',
       addAttachment_title: 'Add Attachment',
