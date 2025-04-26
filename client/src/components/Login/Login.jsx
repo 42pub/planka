@@ -18,6 +18,11 @@ const createMessage = (error) => {
   }
 
   switch (error.message) {
+    case 'Invalid credentials':
+      return {
+        type: 'error',
+        content: 'common.invalidCredentials',
+      };
     case 'Invalid email or username':
       return {
         type: 'error',
@@ -116,6 +121,7 @@ const Login = React.memo(
     useEffect(() => {
       if (wasSubmitting && !isSubmitting && error) {
         switch (error.message) {
+          case 'Invalid credentials':
           case 'Invalid email or username':
             emailOrUsernameField.current.select();
 
@@ -153,7 +159,6 @@ const Login = React.memo(
                   <div>
                     {message && (
                       <Message
-                        // eslint-disable-next-line react/jsx-props-no-spreading
                         {...{
                           [message.type]: true,
                         }}

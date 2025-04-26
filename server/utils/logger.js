@@ -6,15 +6,13 @@ const winston = require('winston');
  */
 const defaultLogTimestampFormat = 'YYYY-MM-DD HH:mm:ss';
 
-const logfile = `${process.cwd()}/logs/planka.log`;
-
 /**
  * Log level for both console and file log sinks.
  *
  * Refer {@link https://github.com/winstonjs/winston#logging here}
  * for more information on Winston log levels.
  */
-const logLevel = 'warn'; // process.env.NODE_ENV === 'production' ? 'info' : 'debug';
+const logLevel = process.env.LOG_LEVEL || 'warn';
 
 const logFormat = winston.format.combine(
   winston.format.uncolorize(),
@@ -22,13 +20,15 @@ const logFormat = winston.format.combine(
   winston.format.printf((log) => `${log.timestamp} [${log.level[0].toUpperCase()}] ${log.message}`),
 );
 
+const logFile = process.env.LOG_FILE || `${process.cwd()}/logs/planka.log`;
+
 // eslint-disable-next-line new-cap
 const customLogger = new winston.createLogger({
   transports: [
     new winston.transports.File({
       level: logLevel,
       format: logFormat,
-      filename: logfile,
+      filename: logFile,
     }),
     new winston.transports.Console({
       level: logLevel,

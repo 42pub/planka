@@ -11,7 +11,7 @@ const makeMapStateToProps = () => {
   const selectCardIdsByListId = selectors.makeSelectCardIdsByListId();
 
   return (state, { id, index }) => {
-    const { name, isPersisted } = selectListById(state, id);
+    const { name, color, isPersisted } = selectListById(state, id);
     const cardIds = selectCardIdsByListId(state, id);
     const currentUserMembership = selectors.selectCurrentUserMembershipForCurrentBoard(state);
 
@@ -22,6 +22,7 @@ const makeMapStateToProps = () => {
       id,
       index,
       name,
+      color,
       isPersisted,
       cardIds,
       canEdit: isCurrentUserEditor,
@@ -33,6 +34,7 @@ const mapDispatchToProps = (dispatch, { id }) =>
   bindActionCreators(
     {
       onUpdate: (data) => entryActions.updateList(id, data),
+      onSort: (data) => entryActions.sortList(id, data),
       onDelete: () => entryActions.deleteList(id),
       onCardCreate: (data, autoOpen) => entryActions.createCard(id, data, autoOpen),
     },
