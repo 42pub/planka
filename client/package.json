@@ -1,5 +1,5 @@
 {
-  "name": "planka-client",
+  "name": "teamboard-client",
   "private": true,
   "scripts": {
     "build": "react-app-rewired build",
