@@ -148,6 +148,7 @@ module.exports = {
       type: 'string',
       isNotEmptyString: true,
       allowNull: true,
+      columnName: 'linked_telegram_account',
     },
   },
 
