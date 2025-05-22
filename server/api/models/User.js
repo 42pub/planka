@@ -144,6 +144,11 @@ module.exports = {
       collection: 'IdentityProviderUser',
       via: 'userId',
     },
+    linkedTelegramAccount: {
+      type: 'string',
+      isNotEmptyString: true,
+      allowNull: true,
+    },
   },
 
   tableName: 'user_account',
