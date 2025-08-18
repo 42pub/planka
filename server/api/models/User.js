@@ -5,6 +5,8 @@
  * @docs        :: https://sailsjs.com/docs/concepts/models-and-orm/models
  */
 
+const { uniq } = require("lodash");
+
 const LANGUAGES = [
   'ar-YE',
   'bg-BG',
@@ -149,6 +151,7 @@ module.exports = {
       isNotEmptyString: true,
       allowNull: true,
       columnName: 'linked_telegram_account',
+      unique: true
     },
   },
 
