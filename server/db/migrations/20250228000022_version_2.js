@@ -5,10 +5,10 @@
 
 module.exports.up = async (knex) => {
   await knex.raw(`
-    CREATE EXTENSION pg_trgm;
+    CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-    CREATE SEQUENCE next_id_seq;
-    CREATE FUNCTION next_id(OUT id BIGINT) AS $$
+    CREATE SEQUENCE IF NOT EXISTS next_id_seq;
+    CREATE OR REPLACE FUNCTION next_id(OUT id BIGINT) AS $$
       DECLARE
         shard INT := 1;
         epoch BIGINT := 1567191600000;
@@ -653,9 +653,9 @@ module.exports.down = async (knex) => {
   await knex.schema.dropTable('notification_service');
 
   return knex.raw(`
-    DROP EXTENSION pg_trgm;
+    DROP EXTENSION IF EXISTS pg_trgm;
 
-    DROP SEQUENCE next_id_seq;
-    DROP FUNCTION next_id(OUT id BIGINT);
+    DROP SEQUENCE IF EXISTS next_id_seq;
+    DROP FUNCTION IF EXISTS next_id(OUT id BIGINT);
   `);
 };
