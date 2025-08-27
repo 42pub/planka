@@ -43,7 +43,7 @@ const Header = React.memo(
       <div className={styles.wrapper}>
         {!project && (
           <Link to={Paths.ROOT} className={classNames(styles.logo, styles.title)}>
-            Planka
+            TeamBoard
           </Link>
         )}
         <Menu inverted size="large" className={styles.menu}>
@@ -78,6 +78,11 @@ const Header = React.memo(
                 <Icon fitted name="users" />
               </Menu.Item>
             )}
+            <Menu.Item className={classNames(styles.item, styles.itemHoverable)}>
+              <a href="/user/cards" target="_blank" rel="noopener noreferrer">
+                <Icon fitted name="star" style={{ color: 'yellow' }} />
+              </a>
+            </Menu.Item>
             <NotificationsPopup items={notifications} onDelete={onNotificationDelete}>
               <Menu.Item className={classNames(styles.item, styles.itemHoverable)}>
                 <Icon fitted name="bell" />

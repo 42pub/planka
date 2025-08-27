@@ -3,13 +3,13 @@ import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
-import { Button, Form, Grid, Header, Message } from 'semantic-ui-react';
+import { Form, Grid, Header, Message } from 'semantic-ui-react';
 import { useDidUpdate, usePrevious, useToggle } from '../../lib/hooks';
 import { Input } from '../../lib/custom-ui';
-
+import { Button } from 'semantic-ui-react';
 import { useForm } from '../../hooks';
 import { isUsername } from '../../utils/validator';
-
+import Config from "../../constants/Config"
 import styles from './Login.module.scss';
 
 const createMessage = (error) => {
@@ -219,6 +219,30 @@ const Login = React.memo(
                         onClick={onAuthenticateUsingOidc}
                       />
                     )}
+
+                    <div className={styles.oauthButtons}>
+                      <hr style={{ width: "100%", margin: "40px 0 20px 0" }} />
+                      
+                      <Button
+                        as="a"
+                        href={`${Config.SERVER_BASE_URL}/api/oauth/gitlab`}
+                        className={styles.oauthButton}
+                        fluid
+                        size="large"
+                      >
+                        Войти через git.hm
+                      </Button>
+
+                      <Button
+                        as="a"
+                        href={`${Config.SERVER_BASE_URL}/api/oauth/google`}
+                        className={styles.oauthButton}
+                        fluid
+                        size="large"
+                      >
+                        Войти через Google
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </Grid.Column>
