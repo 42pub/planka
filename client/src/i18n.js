@@ -134,7 +134,27 @@ i18n.loadCoreLocale = async (language = i18n.resolvedLanguage) => {
   if (language === FALLBACK_LANGUAGE) {
     return;
   }
+  // If the locale is already embedded (statically imported in ./locales/index.js), use it
+  // to avoid dynamic + static import of the same module which produces Vite warnings.
+  const embedded = embeddedLocales[language];
+  if (embedded && Object.keys(embedded).length > 0) {
+    Object.keys(embedded).forEach((namespace) => {
+      switch (namespace) {
+        case 'dateFns':
+        case 'timeAgo':
+        case 'markdownEditor':
+          i18n[namespace].addLocale(language, embedded[namespace]);
 
+          break;
+        default:
+          i18n.addResourceBundle(language, namespace, embedded[namespace], true, true);
+      }
+    });
+
+    return;
+  }
+
+  // Fallback to dynamic import when the locale is not embedded (lazy load)
   const { default: locale } = await import(`./locales/${language}/core.js`);
 
   Object.keys(locale).forEach((namespace) => {
