@@ -24,7 +24,8 @@ module.exports.up = async (knex) => {
     $$ LANGUAGE PLPGSQL;
   `);
 
-  await knex.schema.createTable('file_reference', (table) => {
+  if (!(await knex.schema.hasTable('file_reference'))) {
+    await knex.schema.createTable('file_reference', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -37,10 +38,12 @@ module.exports.up = async (knex) => {
     /* Indexes */
 
     table.index('total');
-  });
+    });
+  }
 
-  await knex.schema
-    .createTable('user_account', (table) => {
+  if (!(await knex.schema.hasTable('user_account'))) {
+    await knex.schema
+      .createTable('user_account', (table) => {
       /* Columns */
 
       table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -74,12 +77,14 @@ module.exports.up = async (knex) => {
       table.index('role');
       table.index('username');
       table.index('is_deactivated');
-    })
-    .raw(
+  })
+  .raw(
       'ALTER TABLE user_account ADD CONSTRAINT user_account_username_unique EXCLUDE (username WITH =) WHERE (username IS NOT NULL);',
     );
+  }
 
-  await knex.schema.createTable('identity_provider_user', (table) => {
+  if (!(await knex.schema.hasTable('identity_provider_user'))) {
+    await knex.schema.createTable('identity_provider_user', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -96,9 +101,11 @@ module.exports.up = async (knex) => {
 
     table.unique(['issuer', 'sub']);
     table.index('user_id');
-  });
+    });
+  }
 
-  await knex.schema.createTable('session', (table) => {
+  if (!(await knex.schema.hasTable('session'))) {
+    await knex.schema.createTable('session', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -119,9 +126,11 @@ module.exports.up = async (knex) => {
     table.index('user_id');
     table.unique('access_token');
     table.index('remote_address');
-  });
+    });
+  }
 
-  await knex.schema.createTable('project', (table) => {
+  if (!(await knex.schema.hasTable('project'))) {
+    await knex.schema.createTable('project', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -141,9 +150,11 @@ module.exports.up = async (knex) => {
     /* Indexes */
 
     table.index('owner_project_manager_id');
-  });
+    });
+  }
 
-  await knex.schema.createTable('project_favorite', (table) => {
+  if (!(await knex.schema.hasTable('project_favorite'))) {
+    await knex.schema.createTable('project_favorite', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -158,9 +169,11 @@ module.exports.up = async (knex) => {
 
     table.unique(['project_id', 'user_id']);
     table.index('user_id');
-  });
+    });
+  }
 
-  await knex.schema.createTable('project_manager', (table) => {
+  if (!(await knex.schema.hasTable('project_manager'))) {
+    await knex.schema.createTable('project_manager', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -175,9 +188,11 @@ module.exports.up = async (knex) => {
 
     table.unique(['project_id', 'user_id']);
     table.index('user_id');
-  });
+    });
+  }
 
-  await knex.schema.createTable('background_image', (table) => {
+  if (!(await knex.schema.hasTable('background_image'))) {
+    await knex.schema.createTable('background_image', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -194,9 +209,11 @@ module.exports.up = async (knex) => {
     /* Indexes */
 
     table.index('project_id');
-  });
+    });
+  }
 
-  await knex.schema.createTable('base_custom_field_group', (table) => {
+  if (!(await knex.schema.hasTable('base_custom_field_group'))) {
+    await knex.schema.createTable('base_custom_field_group', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -211,9 +228,11 @@ module.exports.up = async (knex) => {
     /* Indexes */
 
     table.index('project_id');
-  });
+    });
+  }
 
-  await knex.schema.createTable('board', (table) => {
+  if (!(await knex.schema.hasTable('board'))) {
+    await knex.schema.createTable('board', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -234,9 +253,11 @@ module.exports.up = async (knex) => {
 
     table.index('project_id');
     table.index('position');
-  });
+    });
+  }
 
-  await knex.schema.createTable('board_subscription', (table) => {
+  if (!(await knex.schema.hasTable('board_subscription'))) {
+    await knex.schema.createTable('board_subscription', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -251,9 +272,11 @@ module.exports.up = async (knex) => {
 
     table.unique(['board_id', 'user_id']);
     table.index('user_id');
-  });
+    });
+  }
 
-  await knex.schema.createTable('board_membership', (table) => {
+  if (!(await knex.schema.hasTable('board_membership'))) {
+    await knex.schema.createTable('board_membership', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -273,9 +296,11 @@ module.exports.up = async (knex) => {
     table.index('project_id');
     table.unique(['board_id', 'user_id']);
     table.index('user_id');
-  });
+    });
+  }
 
-  await knex.schema.createTable('label', (table) => {
+  if (!(await knex.schema.hasTable('label'))) {
+    await knex.schema.createTable('label', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -293,9 +318,11 @@ module.exports.up = async (knex) => {
 
     table.index('board_id');
     table.index('position');
-  });
+    });
+  }
 
-  await knex.schema.createTable('list', (table) => {
+  if (!(await knex.schema.hasTable('list'))) {
+    await knex.schema.createTable('list', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -315,9 +342,11 @@ module.exports.up = async (knex) => {
     table.index('board_id');
     table.index('type');
     table.index('position');
-  });
+    });
+  }
 
-  await knex.schema.createTable('card', async (table) => {
+  if (!(await knex.schema.hasTable('card'))) {
+    await knex.schema.createTable('card', async (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -346,12 +375,14 @@ module.exports.up = async (knex) => {
     table.index('creator_user_id');
     table.index('position');
     table.index('list_changed_at');
-  }).raw(`
-    CREATE INDEX card_name_index ON card USING GIN (name gin_trgm_ops);
-    CREATE INDEX card_description_index ON card USING GIN (description gin_trgm_ops);
-  `);
+    }).raw(`
+      CREATE INDEX IF NOT EXISTS card_name_index ON card USING GIN (name gin_trgm_ops);
+      CREATE INDEX IF NOT EXISTS card_description_index ON card USING GIN (description gin_trgm_ops);
+    `);
+  }
 
-  await knex.schema.createTable('card_subscription', (table) => {
+  if (!(await knex.schema.hasTable('card_subscription'))) {
+    await knex.schema.createTable('card_subscription', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -368,9 +399,11 @@ module.exports.up = async (knex) => {
 
     table.unique(['card_id', 'user_id']);
     table.index('user_id');
-  });
+    });
+  }
 
-  await knex.schema.createTable('card_membership', (table) => {
+  if (!(await knex.schema.hasTable('card_membership'))) {
+    await knex.schema.createTable('card_membership', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -385,9 +418,11 @@ module.exports.up = async (knex) => {
 
     table.unique(['card_id', 'user_id']);
     table.index('user_id');
-  });
+    });
+  }
 
-  await knex.schema.createTable('card_label', (table) => {
+  if (!(await knex.schema.hasTable('card_label'))) {
+    await knex.schema.createTable('card_label', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -402,9 +437,11 @@ module.exports.up = async (knex) => {
 
     table.unique(['card_id', 'label_id']);
     table.index('label_id');
-  });
+    });
+  }
 
-  await knex.schema.createTable('task_list', (table) => {
+  if (!(await knex.schema.hasTable('task_list'))) {
+    await knex.schema.createTable('task_list', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -422,9 +459,11 @@ module.exports.up = async (knex) => {
 
     table.index('card_id');
     table.index('position');
-  });
+    });
+  }
 
-  await knex.schema.createTable('task', (table) => {
+  if (!(await knex.schema.hasTable('task'))) {
+    await knex.schema.createTable('task', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -444,9 +483,11 @@ module.exports.up = async (knex) => {
     table.index('task_list_id');
     table.index('assignee_user_id');
     table.index('position');
-  });
+    });
+  }
 
-  await knex.schema.createTable('attachment', (table) => {
+  if (!(await knex.schema.hasTable('attachment'))) {
+    await knex.schema.createTable('attachment', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -465,9 +506,11 @@ module.exports.up = async (knex) => {
 
     table.index('card_id');
     table.index('creator_user_id');
-  });
+    });
+  }
 
-  await knex.schema.createTable('custom_field_group', (table) => {
+  if (!(await knex.schema.hasTable('custom_field_group'))) {
+    await knex.schema.createTable('custom_field_group', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -488,9 +531,11 @@ module.exports.up = async (knex) => {
     table.index('card_id');
     table.index('base_custom_field_group_id');
     table.index('position');
-  });
+    });
+  }
 
-  await knex.schema.createTable('custom_field', (table) => {
+  if (!(await knex.schema.hasTable('custom_field'))) {
+    await knex.schema.createTable('custom_field', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -510,9 +555,11 @@ module.exports.up = async (knex) => {
     table.index('base_custom_field_group_id');
     table.index('custom_field_group_id');
     table.index('position');
-  });
+    });
+  }
 
-  await knex.schema.createTable('custom_field_value', (table) => {
+  if (!(await knex.schema.hasTable('custom_field_value'))) {
+    await knex.schema.createTable('custom_field_value', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -531,9 +578,11 @@ module.exports.up = async (knex) => {
     table.unique(['card_id', 'custom_field_group_id', 'custom_field_id']);
     table.index('custom_field_group_id');
     table.index('custom_field_id');
-  });
+    });
+  }
 
-  await knex.schema.createTable('comment', (table) => {
+  if (!(await knex.schema.hasTable('comment'))) {
+    await knex.schema.createTable('comment', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -550,9 +599,11 @@ module.exports.up = async (knex) => {
 
     table.index('card_id');
     table.index('user_id');
-  });
+    });
+  }
 
-  await knex.schema.createTable('action', (table) => {
+  if (!(await knex.schema.hasTable('action'))) {
+    await knex.schema.createTable('action', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -570,9 +621,11 @@ module.exports.up = async (knex) => {
 
     table.index('card_id');
     table.index('user_id');
-  });
+    });
+  }
 
-  await knex.schema.createTable('notification', (table) => {
+  if (!(await knex.schema.hasTable('notification'))) {
+    await knex.schema.createTable('notification', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -599,9 +652,11 @@ module.exports.up = async (knex) => {
     table.index('comment_id');
     table.index('action_id');
     table.index('is_read');
-  });
+    });
+  }
 
-  return knex.schema.createTable('notification_service', (table) => {
+  if (!(await knex.schema.hasTable('notification_service'))) {
+    await knex.schema.createTable('notification_service', (table) => {
     /* Columns */
 
     table.bigInteger('id').primary().defaultTo(knex.raw('next_id()'));
@@ -619,38 +674,39 @@ module.exports.up = async (knex) => {
 
     table.index('user_id');
     table.index('board_id');
-  });
+    });
+  }
 };
 
 module.exports.down = async (knex) => {
-  await knex.schema.dropTable('file_reference');
-  await knex.schema.dropTable('user_account');
-  await knex.schema.dropTable('identity_provider_user');
-  await knex.schema.dropTable('session');
-  await knex.schema.dropTable('project');
-  await knex.schema.dropTable('project_favorite');
-  await knex.schema.dropTable('project_manager');
-  await knex.schema.dropTable('background_image');
-  await knex.schema.dropTable('base_custom_field_group');
-  await knex.schema.dropTable('board');
-  await knex.schema.dropTable('board_subscription');
-  await knex.schema.dropTable('board_membership');
-  await knex.schema.dropTable('label');
-  await knex.schema.dropTable('list');
-  await knex.schema.dropTable('card');
-  await knex.schema.dropTable('card_subscription');
-  await knex.schema.dropTable('card_membership');
-  await knex.schema.dropTable('card_label');
-  await knex.schema.dropTable('task_list');
-  await knex.schema.dropTable('task');
-  await knex.schema.dropTable('attachment');
-  await knex.schema.dropTable('custom_field_group');
-  await knex.schema.dropTable('custom_field');
-  await knex.schema.dropTable('custom_field_value');
-  await knex.schema.dropTable('comment');
-  await knex.schema.dropTable('action');
-  await knex.schema.dropTable('notification');
-  await knex.schema.dropTable('notification_service');
+  await knex.schema.dropTableIfExists('file_reference');
+  await knex.schema.dropTableIfExists('user_account');
+  await knex.schema.dropTableIfExists('identity_provider_user');
+  await knex.schema.dropTableIfExists('session');
+  await knex.schema.dropTableIfExists('project');
+  await knex.schema.dropTableIfExists('project_favorite');
+  await knex.schema.dropTableIfExists('project_manager');
+  await knex.schema.dropTableIfExists('background_image');
+  await knex.schema.dropTableIfExists('base_custom_field_group');
+  await knex.schema.dropTableIfExists('board');
+  await knex.schema.dropTableIfExists('board_subscription');
+  await knex.schema.dropTableIfExists('board_membership');
+  await knex.schema.dropTableIfExists('label');
+  await knex.schema.dropTableIfExists('list');
+  await knex.schema.dropTableIfExists('card');
+  await knex.schema.dropTableIfExists('card_subscription');
+  await knex.schema.dropTableIfExists('card_membership');
+  await knex.schema.dropTableIfExists('card_label');
+  await knex.schema.dropTableIfExists('task_list');
+  await knex.schema.dropTableIfExists('task');
+  await knex.schema.dropTableIfExists('attachment');
+  await knex.schema.dropTableIfExists('custom_field_group');
+  await knex.schema.dropTableIfExists('custom_field');
+  await knex.schema.dropTableIfExists('custom_field_value');
+  await knex.schema.dropTableIfExists('comment');
+  await knex.schema.dropTableIfExists('action');
+  await knex.schema.dropTableIfExists('notification');
+  await knex.schema.dropTableIfExists('notification_service');
 
   return knex.raw(`
     DROP EXTENSION IF EXISTS pg_trgm;
