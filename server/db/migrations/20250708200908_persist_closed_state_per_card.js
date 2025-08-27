@@ -11,15 +11,28 @@ exports.up = async (knex) => {
   });
 
   await knex.raw(`
-    UPDATE card
-    SET is_closed = TRUE
-    FROM list
-    WHERE card.list_id = list.id AND list.type = 'closed';
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'list' AND column_name = 'type'
+      ) THEN
+        UPDATE card
+        SET is_closed = TRUE
+        FROM list
+        WHERE card.list_id = list.id AND list.type = 'closed';
+      END IF;
+    END;
+    $$;
   `);
 
-  return knex.schema.alterTable('card', (table) => {
-    table.boolean('is_closed').notNullable().alter();
-  });
+  // Ensure column exists then alter to NOT NULL (idempotent)
+  if (await knex.schema.hasColumn('card', 'is_closed')) {
+    return knex.schema.alterTable('card', (table) => {
+      table.boolean('is_closed').notNullable().alter();
+    });
+  }
+  return Promise.resolve();
 };
 
 exports.down = (knex) =>
