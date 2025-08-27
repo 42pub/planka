@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 import { call, put, select } from 'redux-saga/effects';
 
 import request from '../request';
@@ -5,11 +10,10 @@ import selectors from '../../../selectors';
 import actions from '../../../actions';
 import api from '../../../api';
 
-export function* fetchActivities(cardId) {
-  const { isActivitiesDetailsVisible } = yield select(selectors.selectCardById, cardId);
-  const lastId = yield select(selectors.selectLastActivityIdByCardId, cardId);
+export function* fetchActivitiesInBoard(boardId) {
+  const { lastActivityId } = yield select(selectors.selectBoardById, boardId);
 
-  yield put(actions.fetchActivities(cardId));
+  yield put(actions.fetchActivitiesInBoard(boardId));
 
   let activities;
   let users;
@@ -18,71 +22,60 @@ export function* fetchActivities(cardId) {
     ({
       items: activities,
       included: { users },
-    } = yield call(request, api.getActivities, cardId, {
-      beforeId: lastId,
-      withDetails: isActivitiesDetailsVisible,
+    } = yield call(request, api.getActivitiesInBoard, boardId, {
+      beforeId: lastActivityId || undefined,
     }));
   } catch (error) {
-    yield put(actions.fetchActivities.failure(cardId, error));
+    yield put(actions.fetchActivitiesInBoard.failure(boardId, error));
     return;
   }
 
-  yield put(actions.fetchActivities.success(cardId, activities, users));
+  yield put(actions.fetchActivitiesInBoard.success(boardId, activities, users));
+}
+
+export function* fetchActivitiesInCurrentBoard() {
+  const { boardId } = yield select(selectors.selectPath);
+
+  yield call(fetchActivitiesInBoard, boardId);
+}
+
+export function* fetchActivitiesInCard(cardId) {
+  const { lastActivityId } = yield select(selectors.selectCardById, cardId);
+
+  yield put(actions.fetchActivitiesInCard(cardId));
+
+  let activities;
+  let users;
+
+  try {
+    ({
+      items: activities,
+      included: { users },
+    } = yield call(request, api.getActivitiesInCard, cardId, {
+      beforeId: lastActivityId || undefined,
+    }));
+  } catch (error) {
+    yield put(actions.fetchActivitiesInCard.failure(cardId, error));
+    return;
+  }
+
+  yield put(actions.fetchActivitiesInCard.success(cardId, activities, users));
 }
 
 export function* fetchActivitiesInCurrentCard() {
   const { cardId } = yield select(selectors.selectPath);
 
-  yield call(fetchActivities, cardId);
-}
-
-export function* toggleActivitiesDetails(cardId, isVisible) {
-  yield put(actions.toggleActivitiesDetails(cardId, isVisible));
-
-  if (isVisible) {
-    let activities;
-    let users;
-
-    try {
-      ({
-        items: activities,
-        included: { users },
-      } = yield call(request, api.getActivities, cardId, {
-        withDetails: isVisible,
-      }));
-    } catch (error) {
-      yield put(actions.toggleActivitiesDetails.failure(cardId, error));
-      return;
-    }
-
-    yield put(actions.toggleActivitiesDetails.success(cardId, activities, users));
-  }
-}
-
-export function* toggleActivitiesDetailsInCurrentCard(isVisible) {
-  const { cardId } = yield select(selectors.selectPath);
-
-  yield call(toggleActivitiesDetails, cardId, isVisible);
+  yield call(fetchActivitiesInCard, cardId);
 }
 
 export function* handleActivityCreate(activity) {
   yield put(actions.handleActivityCreate(activity));
 }
 
-export function* handleActivityUpdate(activity) {
-  yield put(actions.handleActivityUpdate(activity));
-}
-
-export function* handleActivityDelete(activity) {
-  yield put(actions.handleActivityDelete(activity));
-}
-
 export default {
-  fetchActivities,
+  fetchActivitiesInBoard,
+  fetchActivitiesInCurrentBoard,
+  fetchActivitiesInCard,
   fetchActivitiesInCurrentCard,
-  toggleActivitiesDetails,
-  toggleActivitiesDetailsInCurrentCard,
   handleActivityCreate,
-  handleActivityUpdate,
-  handleActivityDelete,
 };

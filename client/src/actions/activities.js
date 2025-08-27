@@ -1,39 +1,43 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 import ActionTypes from '../constants/ActionTypes';
 
-const fetchActivities = (cardId) => ({
-  type: ActionTypes.ACTIVITIES_FETCH,
+const fetchActivitiesInBoard = (boardId) => ({
+  type: ActionTypes.ACTIVITIES_IN_BOARD_FETCH,
   payload: {
-    cardId,
+    boardId,
   },
 });
 
-fetchActivities.success = (cardId, activities, users) => ({
-  type: ActionTypes.ACTIVITIES_FETCH__SUCCESS,
+fetchActivitiesInBoard.success = (boardId, activities, users) => ({
+  type: ActionTypes.ACTIVITIES_IN_BOARD_FETCH__SUCCESS,
   payload: {
-    cardId,
+    boardId,
     activities,
     users,
   },
 });
 
-fetchActivities.failure = (cardId, error) => ({
-  type: ActionTypes.ACTIVITIES_FETCH__FAILURE,
+fetchActivitiesInBoard.failure = (boardId, error) => ({
+  type: ActionTypes.ACTIVITIES_IN_BOARD_FETCH__FAILURE,
   payload: {
-    cardId,
+    boardId,
     error,
   },
 });
 
-const toggleActivitiesDetails = (cardId, isVisible) => ({
-  type: ActionTypes.ACTIVITIES_DETAILS_TOGGLE,
+const fetchActivitiesInCard = (cardId) => ({
+  type: ActionTypes.ACTIVITIES_IN_CARD_FETCH,
   payload: {
     cardId,
-    isVisible,
   },
 });
 
-toggleActivitiesDetails.success = (cardId, activities, users) => ({
-  type: ActionTypes.ACTIVITIES_DETAILS_TOGGLE__SUCCESS,
+fetchActivitiesInCard.success = (cardId, activities, users) => ({
+  type: ActionTypes.ACTIVITIES_IN_CARD_FETCH__SUCCESS,
   payload: {
     cardId,
     activities,
@@ -41,8 +45,8 @@ toggleActivitiesDetails.success = (cardId, activities, users) => ({
   },
 });
 
-toggleActivitiesDetails.failure = (cardId, error) => ({
-  type: ActionTypes.ACTIVITIES_DETAILS_TOGGLE__FAILURE,
+fetchActivitiesInCard.failure = (cardId, error) => ({
+  type: ActionTypes.ACTIVITIES_IN_CARD_FETCH__FAILURE,
   payload: {
     cardId,
     error,
@@ -56,24 +60,8 @@ const handleActivityCreate = (activity) => ({
   },
 });
 
-const handleActivityUpdate = (activity) => ({
-  type: ActionTypes.ACTIVITY_UPDATE_HANDLE,
-  payload: {
-    activity,
-  },
-});
-
-const handleActivityDelete = (activity) => ({
-  type: ActionTypes.ACTIVITY_DELETE_HANDLE,
-  payload: {
-    activity,
-  },
-});
-
 export default {
-  fetchActivities,
-  toggleActivitiesDetails,
+  fetchActivitiesInBoard,
+  fetchActivitiesInCard,
   handleActivityCreate,
-  handleActivityUpdate,
-  handleActivityDelete,
 };

@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 const { v4: uuid } = require('uuid');
 const jwt = require('jsonwebtoken');
 
@@ -12,13 +17,16 @@ module.exports = {
     issuedAt: {
       type: 'ref',
     },
+    expiresIn: {
+      type: 'number',
+    },
   },
 
   fn(inputs) {
-    const { issuedAt = new Date() } = inputs;
+    const { issuedAt = new Date(), expiresIn = sails.config.custom.tokenExpiresIn } = inputs;
 
     const iat = Math.floor(issuedAt / 1000);
-    const exp = iat + sails.config.custom.tokenExpiresIn * 24 * 60 * 60;
+    const exp = iat + expiresIn;
 
     const payload = {
       iat,

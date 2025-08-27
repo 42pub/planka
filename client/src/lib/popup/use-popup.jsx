@@ -1,29 +1,38 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 import { ResizeObserver } from '@juggle/resize-observer';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Button, Popup as SemanticUIPopup } from 'semantic-ui-react';
 
 import styles from './Popup.module.css';
 
-export default (Step, props) => {
+export default (Step, { position, onOpen, onClose } = {}) => {
   return useMemo(() => {
-    const Popup = React.memo(({ children, onClose, ...stepProps }) => {
+    const Popup = React.forwardRef(({ children, ...stepProps }, ref) => {
       const [isOpened, setIsOpened] = useState(false);
 
-      const wrapper = useRef(null);
-      const resizeObserver = useRef(null);
+      const wrapperRef = useRef(null);
+      const resizeObserverRef = useRef(null);
+
+      const open = useCallback(() => {
+        setIsOpened(true);
+
+        if (onOpen) {
+          onOpen();
+        }
+      }, []);
 
       const handleOpen = useCallback(() => {
-        setIsOpened(true);
-      }, []);
+        open();
+      }, [open]);
 
       const handleClose = useCallback(() => {
         setIsOpened(false);
-
-        if (onClose) {
-          onClose();
-        }
-      }, [onClose]);
+      }, []);
 
       const handleMouseDown = useCallback((event) => {
         event.stopPropagation();
@@ -36,7 +45,6 @@ export default (Step, props) => {
       const handleTriggerClick = useCallback(
         (event) => {
           event.stopPropagation();
-
           const { onClick } = children;
 
           if (onClick) {
@@ -47,27 +55,35 @@ export default (Step, props) => {
       );
 
       const handleContentRef = useCallback((element) => {
-        if (resizeObserver.current) {
-          resizeObserver.current.disconnect();
+        if (resizeObserverRef.current) {
+          resizeObserverRef.current.disconnect();
         }
 
         if (!element) {
-          resizeObserver.current = null;
+          resizeObserverRef.current = null;
           return;
         }
 
-        resizeObserver.current = new ResizeObserver(() => {
-          if (resizeObserver.current.isInitial) {
-            resizeObserver.current.isInitial = false;
+        resizeObserverRef.current = new ResizeObserver(() => {
+          if (resizeObserverRef.current.isInitial) {
+            resizeObserverRef.current.isInitial = false;
             return;
           }
 
-          wrapper.current.positionUpdate();
+          wrapperRef.current.positionUpdate();
         });
 
-        resizeObserver.current.isInitial = true;
-        resizeObserver.current.observe(element);
+        resizeObserverRef.current.isInitial = true;
+        resizeObserverRef.current.observe(element);
       }, []);
+
+      useImperativeHandle(
+        ref,
+        () => ({
+          open,
+        }),
+        [open],
+      );
 
       const tigger = React.cloneElement(children, {
         onClick: handleTriggerClick,
@@ -77,11 +93,11 @@ export default (Step, props) => {
         <SemanticUIPopup
           basic
           wide
-          ref={wrapper}
+          ref={wrapperRef}
           trigger={tigger}
           on="click"
           open={isOpened}
-          position="bottom left"
+          position={position || 'bottom left'}
           popperModifiers={[
             {
               name: 'preventOverflow',
@@ -95,9 +111,9 @@ export default (Step, props) => {
           className={styles.wrapper}
           onOpen={handleOpen}
           onClose={handleClose}
+          onUnmount={onClose}
           onMouseDown={handleMouseDown}
           onClick={handleClick}
-          {...props} // eslint-disable-line react/jsx-props-no-spreading
         >
           <div ref={handleContentRef}>
             <Button icon="close" onClick={handleClose} className={styles.closeButton} />
@@ -110,13 +126,8 @@ export default (Step, props) => {
 
     Popup.propTypes = {
       children: PropTypes.node.isRequired,
-      onClose: PropTypes.func,
     };
 
-    Popup.defaultProps = {
-      onClose: undefined,
-    };
-
-    return Popup;
-  }, [props]);
+    return React.memo(Popup);
+  }, [position, onOpen, onClose]);
 };

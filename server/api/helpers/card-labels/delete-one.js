@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 module.exports = {
   inputs: {
     record: {
@@ -30,7 +35,7 @@ module.exports = {
   },
 
   async fn(inputs) {
-    const cardLabel = await CardLabel.destroyOne(inputs.record.id);
+    const cardLabel = await CardLabel.qm.deleteOne(inputs.record.id);
 
     if (cardLabel) {
       sails.sockets.broadcast(
@@ -42,9 +47,12 @@ module.exports = {
         inputs.request,
       );
 
+      const webhooks = await Webhook.qm.getAll();
+
       sails.helpers.utils.sendWebhooks.with({
-        event: 'cardLabelDelete',
-        data: {
+        webhooks,
+        event: Webhook.Events.CARD_LABEL_DELETE,
+        buildData: () => ({
           item: cardLabel,
           included: {
             projects: [inputs.project],
@@ -52,7 +60,7 @@ module.exports = {
             lists: [inputs.list],
             cards: [inputs.card],
           },
-        },
+        }),
         user: inputs.actorUser,
       });
     }

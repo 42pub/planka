@@ -1,15 +1,18 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 import EntryActionTypes from '../constants/EntryActionTypes';
+
+const fetchActivitiesInCurrentBoard = () => ({
+  type: EntryActionTypes.ACTIVITIES_IN_CURRENT_BOARD_FETCH,
+  payload: {},
+});
 
 const fetchActivitiesInCurrentCard = () => ({
   type: EntryActionTypes.ACTIVITIES_IN_CURRENT_CARD_FETCH,
   payload: {},
-});
-
-const toggleActivitiesDetailsInCurrentCard = (isVisible) => ({
-  type: EntryActionTypes.ACTIVITIES_DETAILS_IN_CURRENT_CARD_TOGGLE,
-  payload: {
-    isVisible,
-  },
 });
 
 const handleActivityCreate = (activity) => ({
@@ -19,24 +22,8 @@ const handleActivityCreate = (activity) => ({
   },
 });
 
-const handleActivityUpdate = (activity) => ({
-  type: EntryActionTypes.ACTIVITY_UPDATE_HANDLE,
-  payload: {
-    activity,
-  },
-});
-
-const handleActivityDelete = (activity) => ({
-  type: EntryActionTypes.ACTIVITY_DELETE_HANDLE,
-  payload: {
-    activity,
-  },
-});
-
 export default {
+  fetchActivitiesInCurrentBoard,
   fetchActivitiesInCurrentCard,
-  toggleActivitiesDetailsInCurrentCard,
   handleActivityCreate,
-  handleActivityUpdate,
-  handleActivityDelete,
 };

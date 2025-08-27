@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 module.exports = {
   inputs: {
     record: {
@@ -30,8 +35,11 @@ module.exports = {
   },
 
   async fn(inputs) {
+    const webhooks = await Webhook.qm.getAll();
+
     if (inputs.record.id === inputs.card.coverAttachmentId) {
       await sails.helpers.cards.updateOne.with({
+        webhooks,
         record: inputs.card,
         values: {
           coverAttachmentId: null,
@@ -40,43 +48,37 @@ module.exports = {
         board: inputs.board,
         list: inputs.list,
         actorUser: inputs.actorUser,
-        request: inputs.request,
       });
     }
 
-    const attachment = await Attachment.archiveOne(inputs.record.id);
+    const { attachment, uploadedFile } = await Attachment.qm.deleteOne(inputs.record.id);
 
     if (attachment) {
-      const fileManager = sails.hooks['file-manager'].getInstance();
-
-      try {
-        await fileManager.deleteDir(
-          `${sails.config.custom.attachmentsPathSegment}/${attachment.dirname}`,
-        );
-      } catch (error) {
-        console.warn(error.stack); // eslint-disable-line no-console
+      if (uploadedFile) {
+        sails.helpers.utils.removeUnreferencedUploadedFiles(uploadedFile);
       }
 
       sails.sockets.broadcast(
         `board:${inputs.board.id}`,
         'attachmentDelete',
         {
-          item: attachment,
+          item: sails.helpers.attachments.presentOne(attachment),
         },
         inputs.request,
       );
 
       sails.helpers.utils.sendWebhooks.with({
-        event: 'attachmentDelete',
-        data: {
-          item: attachment,
+        webhooks,
+        event: Webhook.Events.ATTACHMENT_DELETE,
+        buildData: () => ({
+          item: sails.helpers.attachments.presentOne(attachment),
           included: {
             projects: [inputs.project],
             boards: [inputs.board],
             lists: [inputs.list],
             cards: [inputs.card],
           },
-        },
+        }),
         user: inputs.actorUser,
       });
     }

@@ -1,24 +1,12 @@
-const valuesValidator = (value) => {
-  if (!_.isPlainObject(value)) {
-    return false;
-  }
-
-  if (!_.isPlainObject(value.card)) {
-    return false;
-  }
-
-  if (!_.isPlainObject(value.user) && !_.isString(value.userId)) {
-    return false;
-  }
-
-  return true;
-};
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
 
 module.exports = {
   inputs: {
     values: {
       type: 'ref',
-      custom: valuesValidator,
       required: true,
     },
     project: {
@@ -49,19 +37,23 @@ module.exports = {
   async fn(inputs) {
     const { values } = inputs;
 
-    if (values.user) {
-      values.userId = values.user.id;
+    let cardMembership;
+    try {
+      cardMembership = await CardMembership.qm.createOne({
+        ...values,
+        cardId: values.card.id,
+        userId: values.user.id,
+      });
+    } catch (error) {
+      if (error.code === 'E_UNIQUE') {
+        throw 'userAlreadyCardMember';
+      }
+
+      throw error;
     }
 
-    const cardMembership = await CardMembership.create({
-      ...values,
-      cardId: values.card.id,
-    })
-      .intercept('E_UNIQUE', 'userAlreadyCardMember')
-      .fetch();
-
     sails.sockets.broadcast(
-      `board:${values.card.boardId}`,
+      `board:${inputs.board.id}`,
       'cardMembershipCreate',
       {
         item: cardMembership,
@@ -69,27 +61,36 @@ module.exports = {
       inputs.request,
     );
 
+    const webhooks = await Webhook.qm.getAll();
+
     sails.helpers.utils.sendWebhooks.with({
-      event: 'cardMembershipCreate',
-      data: {
+      webhooks,
+      event: Webhook.Events.CARD_MEMBERSHIP_CREATE,
+      buildData: () => ({
         item: cardMembership,
         included: {
+          users: [values.user],
           projects: [inputs.project],
           boards: [inputs.board],
           lists: [inputs.list],
           cards: [values.card],
         },
-      },
+      }),
       user: inputs.actorUser,
     });
 
-    const cardSubscription = await CardSubscription.create({
-      cardId: cardMembership.cardId,
-      userId: cardMembership.userId,
-      isPermanent: false,
-    })
-      .tolerate('E_UNIQUE')
-      .fetch();
+    let cardSubscription;
+    try {
+      cardSubscription = await CardSubscription.qm.createOne({
+        cardId: cardMembership.cardId,
+        userId: cardMembership.userId,
+        isPermanent: false,
+      });
+    } catch (error) {
+      if (error.code !== 'E_UNIQUE') {
+        throw error;
+      }
+    }
 
     if (cardSubscription) {
       sails.sockets.broadcast(
@@ -106,6 +107,22 @@ module.exports = {
 
       // TODO: send webhooks
     }
+
+    await sails.helpers.actions.createOne.with({
+      webhooks,
+      values: {
+        type: Action.Types.ADD_MEMBER_TO_CARD,
+        data: {
+          user: _.pick(values.user, ['id', 'name']),
+          card: _.pick(values.card, ['name']),
+        },
+        user: inputs.actorUser,
+        card: values.card,
+      },
+      project: inputs.project,
+      board: inputs.board,
+      list: inputs.list,
+    });
 
     return cardMembership;
   },

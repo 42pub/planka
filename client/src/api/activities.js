@@ -1,23 +1,31 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 import socket from './socket';
-import { transformUser } from './users';
 
 /* Transformers */
 
 export const transformActivity = (activity) => ({
   ...activity,
-  createdAt: new Date(activity.createdAt),
+  ...(activity.createdAt && {
+    createdAt: new Date(activity.createdAt),
+  }),
 });
 
 /* Actions */
 
-const getActivities = (cardId, data, headers) =>
+const getActivitiesInBoard = (boardId, data, headers) =>
+  socket.get(`/boards/${boardId}/actions`, data, headers).then((body) => ({
+    ...body,
+    items: body.items.map(transformActivity),
+  }));
+
+const getActivitiesInCard = (cardId, data, headers) =>
   socket.get(`/cards/${cardId}/actions`, data, headers).then((body) => ({
     ...body,
     items: body.items.map(transformActivity),
-    included: {
-      ...body.included,
-      users: body.included.users.map(transformUser),
-    },
   }));
 
 /* Event handlers */
@@ -29,13 +37,8 @@ const makeHandleActivityCreate = (next) => (body) => {
   });
 };
 
-const makeHandleActivityUpdate = makeHandleActivityCreate;
-
-const makeHandleActivityDelete = makeHandleActivityCreate;
-
 export default {
-  getActivities,
+  getActivitiesInBoard,
+  getActivitiesInCard,
   makeHandleActivityCreate,
-  makeHandleActivityUpdate,
-  makeHandleActivityDelete,
 };

@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 const jwt = require('jsonwebtoken');
 
 module.exports = {
@@ -19,7 +24,7 @@ module.exports = {
     try {
       payload = jwt.verify(inputs.token, sails.config.session.secret);
     } catch (error) {
-      throw 'invalidToken';
+      throw { invalidToken: error };
     }
 
     return {

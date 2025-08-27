@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 /**
  * Card.js
  *
@@ -5,15 +10,27 @@
  * @docs        :: https://sailsjs.com/docs/concepts/models-and-orm/models
  */
 
+const Types = {
+  PROJECT: 'project',
+  STORY: 'story',
+};
+
 module.exports = {
+  Types,
+
   attributes: {
     //  ╔═╗╦═╗╦╔╦╗╦╔╦╗╦╦  ╦╔═╗╔═╗
     //  ╠═╝╠╦╝║║║║║ ║ ║╚╗╔╝║╣ ╚═╗
     //  ╩  ╩╚═╩╩ ╩╩ ╩ ╩ ╚╝ ╚═╝╚═╝
 
+    type: {
+      type: 'string',
+      isIn: Object.values(Types),
+      required: true,
+    },
     position: {
       type: 'number',
-      required: true,
+      allowNull: true,
     },
     name: {
       type: 'string',
@@ -28,13 +45,22 @@ module.exports = {
       type: 'ref',
       columnName: 'due_date',
     },
-    isDueDateCompleted: {
-      type: 'boolean',
-      allowNull: true,
-      columnName: 'is_due_date_completed',
-    },
     stopwatch: {
       type: 'json',
+    },
+    commentsTotal: {
+      type: 'number',
+      defaultsTo: 0,
+      columnName: 'comments_total',
+    },
+    isClosed: {
+      type: 'boolean',
+      defaultsTo: false,
+      columnName: 'is_closed',
+    },
+    listChangedAt: {
+      type: 'ref',
+      columnName: 'list_changed_at',
     },
 
     //  ╔═╗╔╦╗╔╗ ╔═╗╔╦╗╔═╗
@@ -45,6 +71,7 @@ module.exports = {
     //  ╠═╣╚═╗╚═╗║ ║║  ║╠═╣ ║ ║║ ║║║║╚═╗
     //  ╩ ╩╚═╝╚═╝╚═╝╚═╝╩╩ ╩ ╩ ╩╚═╝╝╚╝╚═╝
 
+    // Denormalization
     boardId: {
       model: 'Board',
       required: true,
@@ -58,6 +85,10 @@ module.exports = {
     creatorUserId: {
       model: 'User',
       columnName: 'creator_user_id',
+    },
+    prevListId: {
+      model: 'List',
+      columnName: 'prev_list_id',
     },
     coverAttachmentId: {
       model: 'Attachment',
@@ -78,12 +109,16 @@ module.exports = {
       via: 'cardId',
       through: 'CardLabel',
     },
-    tasks: {
-      collection: 'Task',
+    taskLists: {
+      collection: 'TaskList',
       via: 'cardId',
     },
     attachments: {
       collection: 'Attachment',
+      via: 'cardId',
+    },
+    comments: {
+      collection: 'Comment',
       via: 'cardId',
     },
     actions: {

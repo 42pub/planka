@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 /**
  * forbidden.js
  *
@@ -29,8 +34,15 @@
 module.exports = function forbidden(message) {
   const { res } = this;
 
-  return res.status(403).json({
+  const data = {
     code: 'E_FORBIDDEN',
-    message,
-  });
+  };
+
+  if (_.isPlainObject(message)) {
+    Object.assign(data, message);
+  } else {
+    data.message = message;
+  }
+
+  return res.status(403).json(data);
 };

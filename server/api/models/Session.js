@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 /**
  * Session.js
  *
@@ -13,8 +18,15 @@ module.exports = {
 
     accessToken: {
       type: 'string',
-      required: true,
+      isNotEmptyString: true,
+      allowNull: true,
       columnName: 'access_token',
+    },
+    pendingToken: {
+      type: 'string',
+      isNotEmptyString: true,
+      allowNull: true,
+      columnName: 'pending_token',
     },
     httpOnlyToken: {
       type: 'string',

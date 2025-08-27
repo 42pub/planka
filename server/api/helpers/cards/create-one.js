@@ -1,35 +1,15 @@
-const valuesValidator = (value) => {
-  if (!_.isPlainObject(value)) {
-    return false;
-  }
-
-  if (!_.isUndefined(value.position) && !_.isFinite(value.position)) {
-    return false;
-  }
-
-  if (!_.isPlainObject(value.list)) {
-    return false;
-  }
-
-  if (!_.isPlainObject(value.creatorUser)) {
-    return false;
-  }
-
-  return true;
-};
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
 
 module.exports = {
   inputs: {
     values: {
       type: 'ref',
-      custom: valuesValidator,
       required: true,
     },
     project: {
-      type: 'ref',
-      required: true,
-    },
-    board: {
       type: 'ref',
       required: true,
     },
@@ -45,50 +25,59 @@ module.exports = {
   async fn(inputs) {
     const { values } = inputs;
 
-    if (_.isUndefined(values.position)) {
-      throw 'positionMustBeInValues';
-    }
+    if (sails.helpers.lists.isFinite(values.list)) {
+      if (_.isUndefined(values.position)) {
+        throw 'positionMustBeInValues';
+      }
 
-    if (values.dueDate) {
-      if (_.isNil(values.isDueDateCompleted)) {
-        values.isDueDateCompleted = false;
+      const cards = await Card.qm.getByListId(values.list.id);
+
+      const { position, repositions } = sails.helpers.utils.insertToPositionables(
+        values.position,
+        cards,
+      );
+
+      values.position = position;
+
+      if (repositions.length > 0) {
+        // eslint-disable-next-line no-restricted-syntax
+        for (const reposition of repositions) {
+          // eslint-disable-next-line no-await-in-loop
+          await Card.qm.updateOne(
+            {
+              id: reposition.record.id,
+              listId: reposition.record.listId,
+            },
+            {
+              position: reposition.position,
+            },
+          );
+
+          sails.sockets.broadcast(`board:${values.board.id}`, 'cardUpdate', {
+            item: {
+              id: reposition.record.id,
+              position: reposition.position,
+            },
+          });
+
+          // TODO: send webhooks
+        }
       }
     } else {
-      delete values.isDueDateCompleted;
+      delete values.position;
     }
 
-    const cards = await sails.helpers.lists.getCards(values.list.id);
+    if (List.TYPE_STATE_BY_TYPE[values.list.type] === List.TypeStates.CLOSED) {
+      values.isClosed = true;
+    }
 
-    const { position, repositions } = sails.helpers.utils.insertToPositionables(
-      values.position,
-      cards,
-    );
-
-    repositions.forEach(async ({ id, position: nextPosition }) => {
-      await Card.update({
-        id,
-        listId: values.list.id,
-      }).set({
-        position: nextPosition,
-      });
-
-      sails.sockets.broadcast(`board:${values.list.boardId}`, 'cardUpdate', {
-        item: {
-          id,
-          position: nextPosition,
-        },
-      });
-
-      // TODO: send webhooks
-    });
-
-    const card = await Card.create({
+    const card = await Card.qm.createOne({
       ...values,
-      position,
-      boardId: values.list.boardId,
+      boardId: values.board.id,
       listId: values.list.id,
       creatorUserId: values.creatorUser.id,
-    }).fetch();
+      listChangedAt: new Date().toISOString(),
+    });
 
     sails.sockets.broadcast(
       `board:${card.boardId}`,
@@ -99,24 +88,33 @@ module.exports = {
       inputs.request,
     );
 
+    const webhooks = await Webhook.qm.getAll();
+
     sails.helpers.utils.sendWebhooks.with({
-      event: 'cardCreate',
-      data: {
+      webhooks,
+      event: Webhook.Events.CARD_CREATE,
+      buildData: () => ({
         item: card,
         included: {
           projects: [inputs.project],
-          boards: [inputs.board],
+          boards: [values.board],
           lists: [values.list],
         },
-      },
+      }),
       user: values.creatorUser,
     });
 
     if (values.creatorUser.subscribeToOwnCards) {
-      await CardSubscription.create({
-        cardId: card.id,
-        userId: card.creatorUserId,
-      }).tolerate('E_UNIQUE');
+      try {
+        await CardSubscription.qm.createOne({
+          cardId: card.id,
+          userId: card.creatorUserId,
+        });
+      } catch (error) {
+        if (error.code !== 'E_UNIQUE') {
+          throw error;
+        }
+      }
 
       sails.sockets.broadcast(`user:${card.creatorUserId}`, 'cardUpdate', {
         item: {
@@ -129,18 +127,19 @@ module.exports = {
     }
 
     await sails.helpers.actions.createOne.with({
+      webhooks,
       values: {
         card,
         type: Action.Types.CREATE_CARD,
         data: {
-          list: _.pick(values.list, ['id', 'name']),
+          card: _.pick(card, ['name']),
+          list: _.pick(values.list, ['id', 'type', 'name']),
         },
         user: values.creatorUser,
       },
       project: inputs.project,
-      board: inputs.board,
+      board: values.board,
       list: values.list,
-      request: inputs.request,
     });
 
     return card;

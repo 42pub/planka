@@ -1,33 +1,51 @@
-version: '3.8'
-
 services:
-  server:
+  planka-server:
     build:
-      context: ./server
-      dockerfile: ../config/development/Dockerfile.server
+      context: .
+      dockerfile: Dockerfile.dev
+    image: planka-dev
+    pull_policy: never
+    command: ["bash", "-c", "npm install && npm run db:init && npm start"]
+    restart: on-failure
     volumes:
       - ./server:/app
-      - /app/node_modules
+    ports:
+      - 1337:1337
     environment:
-      - NODE_ENV=development
-      - DATABASE_URL=postgresql://user:password@postgres:5432/planka_db
+      - BASE_URL=http://localhost:1337
+      - DATABASE_URL=postgresql://postgres@postgres/planka
       - SECRET_KEY=notsecretkey
 
       # - LOG_LEVEL=warn
 
-      # - TRUST_PROXY=0
+      # - TRUST_PROXY=true
+      # - MAX_UPLOAD_FILE_SIZE=
       # - TOKEN_EXPIRES_IN=365 # In days
 
       # related: https://github.com/knex/knex/issues/2354
-      # As knex does not pass query parameters from the connection string we
-      # have to use environment variables in order to pass the desired values, e.g.
+      # As knex does not pass query parameters from the connection string,
+      # we have to use environment variables in order to pass the desired values, e.g.
       # - PGSSLMODE=<value>
 
       # Configure knex to accept SSL certificates
       # - KNEX_REJECT_UNAUTHORIZED_SSL_CERTIFICATE=false
 
-      # - SHOW_DETAILED_AUTH_ERRORS=false # Set to true to show more detailed authentication error messages. It should not be enabled without a rate limiter for security reasons.
-      # - ALLOW_ALL_TO_CREATE_PROJECTS=true
+      # Used for per-board notifications
+      # - DEFAULT_LANGUAGE=en-US
+
+      # Do not comment out DEFAULT_ADMIN_EMAIL if you want to prevent this user from being edited/deleted
+      # - DEFAULT_ADMIN_EMAIL=demo@demo.demo
+      # - DEFAULT_ADMIN_PASSWORD=demo
+      # - DEFAULT_ADMIN_NAME=Demo Demo
+      # - DEFAULT_ADMIN_USERNAME=demo
+
+      # - INTERNAL_ACCESS_TOKEN=
+      # - STORAGE_LIMIT=
+      # - ACTIVE_USERS_LIMIT=
+
+      # Set to true to show more detailed authentication error messages.
+      # It should not be enabled without a rate limiter for security reasons.
+      # - SHOW_DETAILED_AUTH_ERRORS=false
 
       # - S3_ENDPOINT=
       # - S3_REGION=
@@ -39,12 +57,15 @@ services:
       # - OIDC_ISSUER=
       # - OIDC_CLIENT_ID=
       # - OIDC_CLIENT_SECRET=
+      # - OIDC_USE_OAUTH_CALLBACK=true
       # - OIDC_ID_TOKEN_SIGNED_RESPONSE_ALG=
       # - OIDC_USERINFO_SIGNED_RESPONSE_ALG=
       # - OIDC_SCOPES=openid email profile
       # - OIDC_RESPONSE_MODE=fragment
       # - OIDC_USE_DEFAULT_RESPONSE_MODE=true
       # - OIDC_ADMIN_ROLES=admin
+      # - OIDC_PROJECT_OWNER_ROLES=project_owner
+      # - OIDC_BOARD_USER_ROLES=board_user
       # - OIDC_CLAIMS_SOURCE=userinfo
       # - OIDC_EMAIL_ATTRIBUTE=email
       # - OIDC_NAME_ATTRIBUTE=name
@@ -63,92 +84,38 @@ services:
       # - SMTP_PASSWORD=
       # - SMTP_FROM="Demo Demo" <demo@demo.demo>
       # - SMTP_TLS_REJECT_UNAUTHORIZED=false
-
-      # Optional fields: accessToken, events, excludedEvents
-      # - |
-      #   WEBHOOKS=[{
-      #     "url": "http://localhost:3001",
-      #     "accessToken": "notaccesstoken",
-      #     "events": ["cardCreate", "cardUpdate", "cardDelete"],
-      #     "excludedEvents": ["notificationCreate", "notificationUpdate"]
-      #   }]
-
-      # - SLACK_BOT_TOKEN=
-      # - SLACK_CHANNEL_ID=
-
-      # - GOOGLE_CHAT_WEBHOOK_URL=
-
-      # - TELEGRAM_BOT_TOKEN=
-      # - TELEGRAM_CHAT_ID=
-      # - TELEGRAM_THREAD_ID=
-    working_dir: /app
-    command: ["sh", "-c", "npm run start"]
     depends_on:
       postgres:
         condition: service_healthy
 
-  client:
-    build:
-      context: ./client
-      dockerfile: ../config/development/Dockerfile.client
+  planka-client:
+    image: planka-dev
+    pull_policy: never
+    command: ["bash", "-c", "npm install && npx vite --host"]
+    restart: on-failure
     volumes:
-      - ./client:/app/client
-      - /app/client/node_modules
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
-      - CHOKIDAR_USEPOLLING=true
-      - BASE_URL=http://localhost:3000
-      - REACT_APP_SERVER_BASE_URL=http://localhost:3000
-    working_dir: /app/client
-    command: npm start
-
-  init-db:
-    build:
-      context: ./server
-      dockerfile: ../config/development/Dockerfile.server
-    environment:
-      - DATABASE_URL=postgresql://user:password@postgres:5432/planka_db
-
-      # - DEFAULT_ADMIN_EMAIL=demo@demo.demo # Do not remove if you want to prevent this user from being edited/deleted
-      # - DEFAULT_ADMIN_PASSWORD=demo
-      # - DEFAULT_ADMIN_NAME=Demo Demo
-      # - DEFAULT_ADMIN_USERNAME=demo
-    working_dir: /app
-    command: ["sh", "-c", "npm run db:init"]
-    volumes:
-      - ./server:/app
-      - /app/node_modules
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - ./client:/app
+    ports:
+      - 3000:3000
 
   postgres:
     image: postgres:16-alpine
+    restart: on-failure
     volumes:
       - db-data:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: planka_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-    ports:
-      - "5432:5432"
-    restart: unless-stopped
+      - POSTGRES_DB=planka
+      - POSTGRES_HOST_AUTH_METHOD=trust
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d planka_db"]
-      interval: 10s
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-planka} && psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-planka} -c 'SELECT 1'",
+        ]
+      interval: 3s
       timeout: 5s
-      retries: 5
-
-  proxy:
-    image: nginx:alpine
-    ports:
-      - "3000:80"
-    volumes:
-      - ./config/development/nginx.conf:/etc/nginx/nginx.conf
-    depends_on:
-      - server
-      - client
+      retries: 15
+      start_period: 10s
 
 volumes:
   db-data:

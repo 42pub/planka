@@ -1,88 +1,26 @@
-const EVENT_TYPES = {
-  ACTION_CREATE: 'actionCreate',
-  ACTION_DELETE: 'actionDelete',
-  ACTION_UPDATE: 'actionUpdate',
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
 
-  ATTACHMENT_CREATE: 'attachmentCreate',
-  ATTACHMENT_DELETE: 'attachmentDelete',
-  ATTACHMENT_UPDATE: 'attachmentUpdate',
-
-  BOARD_CREATE: 'boardCreate',
-  BOARD_DELETE: 'boardDelete',
-  BOARD_UPDATE: 'boardUpdate',
-
-  BOARD_MEMBERSHIP_CREATE: 'boardMembershipCreate',
-  BOARD_MEMBERSHIP_DELETE: 'boardMembershipDelete',
-  BOARD_MEMBERSHIP_UPDATE: 'boardMembershipUpdate',
-
-  CARD_CREATE: 'cardCreate',
-  CARD_DELETE: 'cardDelete',
-  CARD_UPDATE: 'cardUpdate',
-
-  CARD_LABEL_CREATE: 'cardLabelCreate',
-  CARD_LABEL_DELETE: 'cardLabelDelete',
-
-  CARD_MEMBERSHIP_CREATE: 'cardMembershipCreate',
-  CARD_MEMBERSHIP_DELETE: 'cardMembershipDelete',
-
-  LABEL_CREATE: 'labelCreate',
-  LABEL_DELETE: 'labelDelete',
-  LABEL_UPDATE: 'labelUpdate',
-
-  LIST_CREATE: 'listCreate',
-  LIST_DELETE: 'listDelete',
-  LIST_SORT: 'listSort',
-  LIST_UPDATE: 'listUpdate',
-
-  NOTIFICATION_CREATE: 'notificationCreate',
-  NOTIFICATION_UPDATE: 'notificationUpdate',
-
-  PROJECT_CREATE: 'projectCreate',
-  PROJECT_DELETE: 'projectDelete',
-  PROJECT_UPDATE: 'projectUpdate',
-
-  PROJECT_MANAGER_CREATE: 'projectManagerCreate',
-  PROJECT_MANAGER_DELETE: 'projectManagerDelete',
-
-  TASK_CREATE: 'taskCreate',
-  TASK_DELETE: 'taskDelete',
-  TASK_UPDATE: 'taskUpdate',
-
-  USER_CREATE: 'userCreate',
-  USER_DELETE: 'userDelete',
-  USER_UPDATE: 'userUpdate',
-};
-
-const jsonifyData = (data) => {
-  const nextData = {};
-
-  if (data.item) {
-    nextData.item = sails.helpers.utils.jsonifyRecord(data.item);
-  }
-
-  if (data.items) {
-    nextData.items = data.items.map((item) => sails.helpers.utils.jsonifyRecord(item));
-  }
-
-  if (data.included) {
-    nextData.included = Object.entries(data.included).reduce(
-      (result, [key, items]) => ({
-        ...result,
-        [key]: items.map((item) => sails.helpers.utils.jsonifyRecord(item)),
-      }),
-      {},
-    );
-  }
-
-  return nextData;
-};
+const Webhook = require('../../models/Webhook');
 
 /**
  * @typedef {Object} Included
+ * @property {any[]} [users] - Array of users (optional).
  * @property {any[]} [projects] - Array of projects (optional).
+ * @property {any[]} [baseCustomFieldGroups] - Array of base custom field groups (optional).
  * @property {any[]} [boards] - Array of boards (optional).
+ * @property {any[]} [boardMemberships] - Array of board memberships (optional).
+ * @property {any[]} [labels] - Array of labels (optional).
  * @property {any[]} [lists] - Array of lists (optional).
  * @property {any[]} [cards] - Array of cards (optional).
+ * @property {any[]} [cardMemberships] - Array of card memberships (optional).
+ * @property {any[]} [taskLists] - Array of task lists (optional).
+ * @property {any[]} [customFieldGroups] - Array of custom field groups (optional).
+ * @property {any[]} [customFields] - Array of custom fields (optional).
+ * @property {any[]} [comments] - Array of comments (optional).
+ * @property {any[]} [actions] - Array of actions (optional).
  */
 
 /**
@@ -95,7 +33,7 @@ const jsonifyData = (data) => {
  * Sends a webhook notification to a configured URL.
  *
  * @param {*} webhook - Webhook configuration.
- * @param {string} event - The event (see {@link EVENT_TYPES}).
+ * @param {string} event - The event.
  * @param {Data} data - The data object containing event data and optionally included data.
  * @param {Data} [prevData] - The data object containing previous state of data (optional).
  * @param {ref} user - User object associated with the event.
@@ -113,9 +51,9 @@ async function sendWebhook(webhook, event, data, prevData, user) {
 
   const body = JSON.stringify({
     event,
-    data: jsonifyData(data),
-    prevData: prevData && jsonifyData(prevData),
-    user: sails.helpers.utils.jsonifyRecord(user),
+    data,
+    prevData,
+    user,
   });
 
   try {
@@ -129,11 +67,11 @@ async function sendWebhook(webhook, event, data, prevData, user) {
       const message = await response.text();
 
       sails.log.error(
-        `Webhook ${webhook.url} failed with status ${response.status} and message: ${message}`,
+        `Webhook ${webhook.name} failed with status ${response.status} and message: ${message}`,
       );
     }
   } catch (error) {
-    sails.log.error(`Webhook ${webhook.url} failed with error: ${error}`);
+    sails.log.error(`Webhook ${webhook.name} failed with error: ${error}`);
   }
 }
 
@@ -141,16 +79,20 @@ module.exports = {
   sync: true,
 
   inputs: {
-    event: {
-      type: 'string',
-      required: true,
-      isIn: Object.values(EVENT_TYPES),
-    },
-    data: {
+    webhooks: {
       type: 'ref',
       required: true,
     },
-    prevData: {
+    event: {
+      type: 'string',
+      required: true,
+      isIn: Object.values(Webhook.Events),
+    },
+    buildData: {
+      type: 'ref',
+      required: true,
+    },
+    buildPrevData: {
       type: 'ref',
     },
     user: {
@@ -160,24 +102,37 @@ module.exports = {
   },
 
   fn(inputs) {
-    if (!sails.config.custom.webhooks) {
-      return;
-    }
-
-    sails.config.custom.webhooks.forEach((webhook) => {
+    const webhooks = inputs.webhooks.filter((webhook) => {
       if (!webhook.url) {
-        return;
+        return false;
       }
 
       if (webhook.excludedEvents && webhook.excludedEvents.includes(inputs.event)) {
-        return;
+        return false;
       }
 
       if (webhook.events && !webhook.events.includes(inputs.event)) {
-        return;
+        return false;
       }
 
-      sendWebhook(webhook, inputs.event, inputs.data, inputs.prevData, inputs.user);
+      return true;
+    });
+
+    if (webhooks.length === 0) {
+      return;
+    }
+
+    const data = inputs.buildData();
+    const prevData = inputs.buildPrevData && inputs.buildPrevData();
+
+    webhooks.forEach((webhook) => {
+      sendWebhook(
+        webhook,
+        inputs.event,
+        data,
+        prevData,
+        sails.helpers.users.presentOne(inputs.user),
+      );
     });
   },
 };

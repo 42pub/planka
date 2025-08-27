@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 /**
  * List.js
  *
@@ -5,11 +10,35 @@
  * @docs        :: https://sailsjs.com/docs/concepts/models-and-orm/models
  */
 
-const SortTypes = {
-  NAME_ASC: 'name_asc',
-  DUE_DATE_ASC: 'dueDate_asc',
-  CREATED_AT_ASC: 'createdAt_asc',
-  CREATED_AT_DESC: 'createdAt_desc',
+const Types = {
+  ACTIVE: 'active',
+  CLOSED: 'closed',
+  ARCHIVE: 'archive',
+  TRASH: 'trash',
+};
+
+const TypeStates = {
+  OPENED: 'opened',
+  CLOSED: 'closed',
+};
+
+const SortFieldNames = {
+  NAME: 'name',
+  DUE_DATE: 'dueDate',
+  CREATED_AT: 'createdAt',
+};
+
+// TODO: should not be here
+const SortOrders = {
+  ASC: 'asc',
+  DESC: 'desc',
+};
+
+const FINITE_TYPES = [Types.ACTIVE, Types.CLOSED];
+
+const TYPE_STATE_BY_TYPE = {
+  [Types.ACTIVE]: TypeStates.OPENED,
+  [Types.CLOSED]: Types.CLOSED,
 };
 
 const COLORS = [
@@ -22,11 +51,16 @@ const COLORS = [
   'bright-moss',
   'antique-blue',
   'dark-granite',
-  'lagune-blue',
+  'turquoise-sea',
 ];
 
 module.exports = {
-  SortTypes,
+  Types,
+  TypeStates,
+  SortFieldNames,
+  SortOrders,
+  FINITE_TYPES,
+  TYPE_STATE_BY_TYPE,
   COLORS,
 
   attributes: {
@@ -34,13 +68,19 @@ module.exports = {
     //  ╠═╝╠╦╝║║║║║ ║ ║╚╗╔╝║╣ ╚═╗
     //  ╩  ╩╚═╩╩ ╩╩ ╩ ╩ ╚╝ ╚═╝╚═╝
 
+    type: {
+      type: 'string',
+      isIn: Object.values(Types),
+      required: true,
+    },
     position: {
       type: 'number',
-      required: true,
+      allowNull: true,
     },
     name: {
       type: 'string',
-      required: true,
+      isNotEmptyString: true,
+      allowNull: true,
     },
     color: {
       type: 'string',

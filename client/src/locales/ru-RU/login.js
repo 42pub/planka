@@ -1,23 +1,31 @@
 export default {
   translation: {
     common: {
+      activeUsersLimitReached: 'Достигнут лимит активных пользователей',
+      adminLoginRequiredToInitializeInstance: null,
+      emailAlreadyInUse: 'E-mail уже занят',
       emailOrUsername: 'E-mail или имя пользователя',
-      invalidEmailOrUsername: 'Неверный e-mail или имя пользователя',
+      iHaveReadAndAgreeToTheseTerms: null,
       invalidCredentials: 'Недействительные учетные данные',
+      invalidEmailOrUsername: 'Неверный e-mail или имя пользователя',
       invalidPassword: 'Неверный пароль',
-      logInToPlanka: 'Вход в Planka',
+      logIn_title: 'Войти',
       noInternetConnection: 'Нет соединения',
+      or: 'Или',
       pageNotFound_title: 'Страница не найдена',
       password: 'Пароль',
-      projectManagement: 'Управление проектами',
+      poweredByPlanka: 'Powered by <1>PLANKA</1>',
       serverConnectionFailed: 'Не могу подключиться к серверу',
       unknownError: 'Что-то пошло не так, попробуйте позже',
       useSingleSignOn: 'Используйте единый вход',
+      usernameAlreadyInUse: 'Имя пользователя уже занято',
     },
 
     action: {
+      cancelAndClose: null,
+      continue: null,
       logIn: 'Войти',
-      logInWithSSO: 'Войти с помощью единого входа',
+      logInWithSso: 'Войти с помощью единого входа',
     },
   },
 };

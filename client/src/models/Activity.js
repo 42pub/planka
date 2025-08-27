@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 import { attr, fk } from 'redux-orm';
 
 import BaseModel from './BaseModel';
@@ -13,8 +18,10 @@ export default class extends BaseModel {
     createdAt: attr({
       getDefault: () => new Date(),
     }),
-    isInCard: attr({
-      getDefault: () => true,
+    boardId: fk({
+      to: 'Board',
+      as: 'board',
+      relatedName: 'activities',
     }),
     cardId: fk({
       to: 'Card',
@@ -33,61 +40,25 @@ export default class extends BaseModel {
       case ActionTypes.SOCKET_RECONNECT_HANDLE:
         Activity.all().delete();
 
-        payload.activities.forEach((activity) => {
-          Activity.upsert({
-            ...activity,
-            isInCard: false,
-          });
-        });
-
         break;
-      case ActionTypes.CORE_INITIALIZE:
-        payload.activities.forEach((activity) => {
-          Activity.upsert({
-            ...activity,
-            isInCard: false,
-          });
-        });
-
-        break;
-      case ActionTypes.ACTIVITIES_FETCH__SUCCESS:
-      case ActionTypes.ACTIVITIES_DETAILS_TOGGLE__SUCCESS:
-      case ActionTypes.NOTIFICATION_CREATE_HANDLE:
+      case ActionTypes.LIST_CARDS_MOVE__SUCCESS:
+      case ActionTypes.ACTIVITIES_IN_BOARD_FETCH__SUCCESS:
+      case ActionTypes.ACTIVITIES_IN_CARD_FETCH__SUCCESS:
         payload.activities.forEach((activity) => {
           Activity.upsert(activity);
         });
 
         break;
-      case ActionTypes.ACTIVITY_CREATE_HANDLE:
-      case ActionTypes.ACTIVITY_UPDATE_HANDLE:
-      case ActionTypes.COMMENT_ACTIVITY_CREATE:
-      case ActionTypes.COMMENT_ACTIVITY_UPDATE__SUCCESS:
-        Activity.upsert(payload.activity);
-
-        break;
-      case ActionTypes.ACTIVITY_DELETE_HANDLE:
-      case ActionTypes.COMMENT_ACTIVITY_DELETE__SUCCESS: {
-        const activityModel = Activity.withId(payload.activity.id);
-
-        if (activityModel) {
-          activityModel.delete();
+      case ActionTypes.CARDS_UPDATE_HANDLE:
+        if (payload.activities) {
+          payload.activities.forEach((activity) => {
+            Activity.upsert(activity);
+          });
         }
 
         break;
-      }
-      case ActionTypes.COMMENT_ACTIVITY_CREATE__SUCCESS:
-        Activity.withId(payload.localId).delete();
+      case ActionTypes.ACTIVITY_CREATE_HANDLE:
         Activity.upsert(payload.activity);
-
-        break;
-      case ActionTypes.COMMENT_ACTIVITY_UPDATE:
-        Activity.withId(payload.id).update({
-          data: payload.data,
-        });
-
-        break;
-      case ActionTypes.COMMENT_ACTIVITY_DELETE:
-        Activity.withId(payload.id).delete();
 
         break;
       default:

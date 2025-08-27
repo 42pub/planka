@@ -27,7 +27,7 @@ existingSecretkeySecret: ""
 ## NOTE: When it's set, the `admin_username` and `admin_password` parameters are ignored
 existingAdminCredsSecret: ""
 
-# Base url for Planka. Will override `ingress.hosts[0].host`
+# Base url for PLANKA. Will override `ingress.hosts[0].host`
 # Defaults to `http://localhost:3000` if ingress is disabled.
 baseUrl: ""
 
@@ -45,6 +45,9 @@ podAnnotations: {}
 podSecurityContext: {}
   # fsGroup: 2000
 
+# Annotations to add to the deployment
+deploymentAnnotations: {}
+
 securityContext: {}
   # capabilities:
   #   drop:
@@ -57,7 +60,7 @@ service:
   annotations: {}
   type: ClusterIP
   port: 1337
-  ## @param service.containerPort Planka HTTP container port
+  ## @param service.containerPort PLANKA HTTP container port
   ## If empty will default to 1337
   ##
   containerPort: 1337
@@ -148,7 +151,7 @@ persistence:
 ##
 ## ---------------
 ## NOTE: A minimal configuration requires setting `clientId`, `clientSecret` and `issuerUrl`. (plus `admin.roles` for administrators)
-## ref: https://docs.planka.cloud/docs/Configuration/OIDC
+## ref: https://docs.planka.cloud/docs/configuration/oidc/
 ##
 oidc:
   ## @param oidc.enabled Enable single sign-on (SSO) with OpenID Connect (OIDC)
@@ -176,7 +179,7 @@ oidc:
 
   ## @param oidc.scopes A list of scopes required for OIDC client.
   ## If empty will default to `openid`, `profile` and `email`
-  ## NOTE: Planka needs the email and name claims
+  ## NOTE: PLANKA needs the email and name claims
   ##
   scopes: []
 
@@ -210,3 +213,22 @@ oidc:
 ##     key: key-inside-the-secret
 ##
 extraEnv: []
+
+## Example extraEnv for configuring SMTP
+## extraEnv:
+##   - name: SMTP_HOST
+##     value: "smtp.example.com"
+##   - name: SMTP_PORT
+##     value: "587"
+##   - name: SMTP_NAME
+##     value: "Your Name"
+##   - name: SMTP_SECURE
+##     value: "true"
+##   - name: SMTP_USER
+##     value: "your_email@example.com"
+##   - name: SMTP_PASSWORD
+##     value: "your_password"
+##   - name: SMTP_FROM
+##     value: "your_email@example.com"
+##   - name: SMTP_TLS_REJECT_UNAUTHORIZED
+##     value: "false"

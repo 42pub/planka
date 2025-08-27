@@ -4,6 +4,10 @@ metadata:
   name: {{ include "planka.fullname" . }}
   labels:
     {{- include "planka.labels" . | nindent 4 }}
+  {{- with .Values.deploymentAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
@@ -50,11 +54,14 @@ spec:
               path: /
               port: http
           volumeMounts:
+            - mountPath: /app/public/favicons
+              subPath: favicons
+              name: planka
             - mountPath: /app/public/user-avatars
               subPath: user-avatars
               name: planka
-            - mountPath: /app/public/project-background-images
-              subPath: project-background-images
+            - mountPath: /app/public/background-images
+              subPath: background-images
               name: planka
             - mountPath: /app/private/attachments
               subPath: attachments
@@ -117,7 +124,7 @@ spec:
               value: {{ required "A secret key needs to be generated using 'openssl rand -hex 64' and assigned to secretkey." .Values.secretkey }}
               {{- end }}
             - name: TRUST_PROXY
-              value: "0"
+              value: "true"
             - name: DEFAULT_ADMIN_EMAIL
               value: {{ .Values.admin_email }}
             - name: DEFAULT_ADMIN_NAME

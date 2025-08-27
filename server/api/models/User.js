@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 /**
  * User.js
  *
@@ -5,16 +10,42 @@
  * @docs        :: https://sailsjs.com/docs/concepts/models-and-orm/models
  */
 
+const Roles = {
+  ADMIN: 'admin',
+  PROJECT_OWNER: 'projectOwner',
+  BOARD_USER: 'boardUser',
+};
+
+// TODO: should not be here
+const EditorModes = {
+  WYSIWYG: 'wysiwyg',
+  MARKUP: 'markup',
+};
+
+const HomeViews = {
+  GRID_PROJECTS: 'gridProjects',
+  GROUPED_PROJECTS: 'groupedProjects',
+};
+
+const ProjectOrders = {
+  BY_DEFAULT: 'byDefault',
+  ALPHABETICALLY: 'alphabetically',
+  BY_CREATION_TIME: 'byCreationTime',
+};
+
 const LANGUAGES = [
   'ar-YE',
   'bg-BG',
   'cs-CZ',
   'da-DK',
   'de-DE',
+  'el-GR',
   'en-GB',
   'en-US',
   'es-ES',
+  'et-EE',
   'fa-IR',
+  'fi-FI',
   'fr-FR',
   'hu-HU',
   'id-ID',
@@ -24,11 +55,12 @@ const LANGUAGES = [
   'nl-NL',
   'pl-PL',
   'pt-BR',
+  'pt-PT',
   'ro-RO',
   'ru-RU',
   'sk-SK',
-  'sr-Cyrl-CS',
-  'sr-Latn-CS',
+  'sr-Cyrl-RS',
+  'sr-Latn-RS',
   'sv-SE',
   'tr-TR',
   'uk-UA',
@@ -37,12 +69,38 @@ const LANGUAGES = [
   'zh-TW',
 ];
 
+const PRIVATE_FIELD_NAMES = ['email', 'isSsoUser'];
+
+const PERSONAL_FIELD_NAMES = [
+  'language',
+  'subscribeToOwnCards',
+  'subscribeToCardWhenCommenting',
+  'turnOffRecentCardHighlighting',
+  'enableFavoritesByDefault',
+  'defaultEditorMode',
+  'defaultHomeView',
+  'defaultProjectsOrder',
+];
+
+const INTERNAL = {
+  id: '_internal',
+  role: Roles.ADMIN,
+};
+
 const OIDC = {
   id: '_oidc',
+  role: Roles.ADMIN,
 };
 
 module.exports = {
+  Roles,
+  EditorModes,
+  HomeViews,
+  ProjectOrders,
   LANGUAGES,
+  PRIVATE_FIELD_NAMES,
+  PERSONAL_FIELD_NAMES,
+  INTERNAL,
   OIDC,
 
   attributes: {
@@ -57,16 +115,13 @@ module.exports = {
     },
     password: {
       type: 'string',
+      isNotEmptyString: true,
+      allowNull: true,
     },
-    isAdmin: {
-      type: 'boolean',
-      defaultsTo: false,
-      columnName: 'is_admin',
-    },
-    isSso: {
-      type: 'boolean',
-      defaultsTo: false,
-      columnName: 'is_sso',
+    role: {
+      type: 'string',
+      isIn: Object.values(Roles),
+      required: true,
     },
     name: {
       type: 'string',
@@ -76,7 +131,7 @@ module.exports = {
       type: 'string',
       isNotEmptyString: true,
       minLength: 3,
-      maxLength: 16,
+      maxLength: 32,
       regex: /^[a-zA-Z0-9]+((_|\.)?[a-zA-Z0-9])*$/,
       allowNull: true,
     },
@@ -103,13 +158,62 @@ module.exports = {
       defaultsTo: false,
       columnName: 'subscribe_to_own_cards',
     },
-    deletedAt: {
-      type: 'ref',
-      columnName: 'deleted_at',
+    subscribeToCardWhenCommenting: {
+      type: 'boolean',
+      defaultsTo: true,
+      columnName: 'subscribe_to_card_when_commenting',
+    },
+    turnOffRecentCardHighlighting: {
+      type: 'boolean',
+      defaultsTo: false,
+      columnName: 'turn_off_recent_card_highlighting',
+    },
+    enableFavoritesByDefault: {
+      type: 'boolean',
+      defaultsTo: false,
+      columnName: 'enable_favorites_by_default',
+    },
+    defaultEditorMode: {
+      type: 'string',
+      isIn: Object.values(EditorModes),
+      defaultsTo: EditorModes.WYSIWYG,
+      columnName: 'default_editor_mode',
+    },
+    defaultHomeView: {
+      type: 'string',
+      isIn: Object.values(HomeViews),
+      defaultsTo: HomeViews.GROUPED_PROJECTS,
+      columnName: 'default_home_view',
+    },
+    defaultProjectsOrder: {
+      type: 'string',
+      isIn: Object.values(ProjectOrders),
+      defaultsTo: ProjectOrders.BY_DEFAULT,
+      columnName: 'default_projects_order',
+    },
+    termsSignature: {
+      type: 'string',
+      isNotEmptyString: true,
+      allowNull: true,
+      columnName: 'terms_signature',
+    },
+    isSsoUser: {
+      type: 'boolean',
+      defaultsTo: false,
+      columnName: 'is_sso_user',
+    },
+    isDeactivated: {
+      type: 'boolean',
+      defaultsTo: false,
+      columnName: 'is_deactivated',
     },
     passwordChangedAt: {
       type: 'ref',
       columnName: 'password_changed_at',
+    },
+    termsAcceptedAt: {
+      type: 'ref',
+      columnName: 'terms_accepted_at',
     },
 
     //  ╔═╗╔╦╗╔╗ ╔═╗╔╦╗╔═╗
@@ -140,27 +244,7 @@ module.exports = {
       via: 'userId',
       through: 'CardMembership',
     },
-    identityProviders: {
-      collection: 'IdentityProviderUser',
-      via: 'userId',
-    },
   },
 
   tableName: 'user_account',
-
-  customToJSON() {
-    const fileManager = sails.hooks['file-manager'].getInstance();
-    const isDefaultAdmin = this.email === sails.config.custom.defaultAdminEmail;
-
-    return {
-      ..._.omit(this, ['password', 'isSso', 'avatar', 'passwordChangedAt']),
-      isLocked: this.isSso || isDefaultAdmin,
-      isRoleLocked: (this.isSso && !sails.config.custom.oidcIgnoreRoles) || isDefaultAdmin,
-      isUsernameLocked: (this.isSso && !sails.config.custom.oidcIgnoreUsername) || isDefaultAdmin,
-      isDeletionLocked: isDefaultAdmin,
-      avatarUrl:
-        this.avatar &&
-        `${fileManager.buildUrl(`${sails.config.custom.userAvatarsPathSegment}/${this.avatar.dirname}/square-100.${this.avatar.extension}`)}`,
-    };
-  },
 };

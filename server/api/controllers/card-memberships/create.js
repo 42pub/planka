@@ -1,3 +1,10 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
+const { idInput } = require('../../../utils/inputs');
+
 const Errors = {
   NOT_ENOUGH_RIGHTS: {
     notEnoughRights: 'Not enough rights',
@@ -16,13 +23,11 @@ const Errors = {
 module.exports = {
   inputs: {
     cardId: {
-      type: 'string',
-      regex: /^[0-9]+$/,
+      ...idInput,
       required: true,
     },
     userId: {
-      type: 'string',
-      regex: /^[0-9]+$/,
+      ...idInput,
       required: true,
     },
   },
@@ -46,13 +51,13 @@ module.exports = {
     const { currentUser } = this.req;
 
     const { card, list, board, project } = await sails.helpers.cards
-      .getProjectPath(inputs.cardId)
+      .getPathToProjectById(inputs.cardId)
       .intercept('pathNotFound', () => Errors.CARD_NOT_FOUND);
 
-    const boardMembership = await BoardMembership.findOne({
-      boardId: board.id,
-      userId: currentUser.id,
-    });
+    const boardMembership = await BoardMembership.qm.getOneByBoardIdAndUserId(
+      board.id,
+      currentUser.id,
+    );
 
     if (!boardMembership) {
       throw Errors.CARD_NOT_FOUND; // Forbidden
@@ -62,10 +67,16 @@ module.exports = {
       throw Errors.NOT_ENOUGH_RIGHTS;
     }
 
-    const isBoardMember = await sails.helpers.users.isBoardMember(inputs.userId, board.id);
+    const user = await User.qm.getOneById(inputs.userId);
+
+    if (!user) {
+      throw Errors.USER_NOT_FOUND;
+    }
+
+    const isBoardMember = await sails.helpers.users.isBoardMember(user.id, board.id);
 
     if (!isBoardMember) {
-      throw Errors.USER_NOT_FOUND;
+      throw Errors.USER_NOT_FOUND; // Forbidden
     }
 
     const cardMembership = await sails.helpers.cardMemberships.createOne
@@ -75,7 +86,7 @@ module.exports = {
         list,
         values: {
           card,
-          userId: inputs.userId,
+          user,
         },
         actorUser: currentUser,
         request: this.req,

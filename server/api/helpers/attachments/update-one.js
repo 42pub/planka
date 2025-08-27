@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 module.exports = {
   inputs: {
     record: {
@@ -36,32 +41,35 @@ module.exports = {
   async fn(inputs) {
     const { values } = inputs;
 
-    const attachment = await Attachment.updateOne(inputs.record.id).set({ ...values });
+    const attachment = await Attachment.qm.updateOne(inputs.record.id, values);
 
     if (attachment) {
       sails.sockets.broadcast(
         `board:${inputs.board.id}`,
         'attachmentUpdate',
         {
-          item: attachment,
+          item: sails.helpers.attachments.presentOne(attachment),
         },
         inputs.request,
       );
 
+      const webhooks = await Webhook.qm.getAll();
+
       sails.helpers.utils.sendWebhooks.with({
-        event: 'attachmentUpdate',
-        data: {
-          item: attachment,
+        webhooks,
+        event: Webhook.Events.ATTACHMENT_UPDATE,
+        buildData: () => ({
+          item: sails.helpers.attachments.presentOne(attachment),
           included: {
             projects: [inputs.project],
             boards: [inputs.board],
             lists: [inputs.list],
             cards: [inputs.card],
           },
-        },
-        prevData: {
-          item: inputs.record,
-        },
+        }),
+        buildPrevData: () => ({
+          item: sails.helpers.attachments.presentOne(inputs.record),
+        }),
         user: inputs.actorUser,
       });
     }

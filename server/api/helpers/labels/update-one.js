@@ -1,14 +1,7 @@
-const valuesValidator = (value) => {
-  if (!_.isPlainObject(value)) {
-    return false;
-  }
-
-  if (!_.isUndefined(value.position) && !_.isFinite(value.position)) {
-    return false;
-  }
-
-  return true;
-};
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
 
 module.exports = {
   inputs: {
@@ -18,7 +11,6 @@ module.exports = {
     },
     values: {
       type: 'json',
-      custom: valuesValidator,
       required: true,
     },
     project: {
@@ -42,7 +34,9 @@ module.exports = {
     const { values } = inputs;
 
     if (!_.isUndefined(values.position)) {
-      const labels = await sails.helpers.boards.getLabels(inputs.record.boardId, inputs.record.id);
+      const labels = await Label.qm.getByBoardId(inputs.record.boardId, {
+        exceptIdOrIds: inputs.record.id,
+      });
 
       const { position, repositions } = sails.helpers.utils.insertToPositionables(
         values.position,
@@ -51,26 +45,31 @@ module.exports = {
 
       values.position = position;
 
-      repositions.forEach(async ({ id, position: nextPosition }) => {
-        await Label.update({
-          id,
-          boardId: inputs.record.boardId,
-        }).set({
-          position: nextPosition,
-        });
+      // eslint-disable-next-line no-restricted-syntax
+      for (const reposition of repositions) {
+        // eslint-disable-next-line no-await-in-loop
+        await Label.qm.updateOne(
+          {
+            id: reposition.record.id,
+            boardId: reposition.record.boardId,
+          },
+          {
+            position: reposition.position,
+          },
+        );
 
         sails.sockets.broadcast(`board:${inputs.record.boardId}`, 'labelUpdate', {
           item: {
-            id,
-            position: nextPosition,
+            id: reposition.record.id,
+            position: reposition.position,
           },
         });
 
         // TODO: send webhooks
-      });
+      }
     }
 
-    const label = await Label.updateOne(inputs.record.id).set({ ...values });
+    const label = await Label.qm.updateOne(inputs.record.id, values);
 
     if (label) {
       sails.sockets.broadcast(
@@ -82,18 +81,21 @@ module.exports = {
         inputs.request,
       );
 
+      const webhooks = await Webhook.qm.getAll();
+
       sails.helpers.utils.sendWebhooks.with({
-        event: 'labelUpdate',
-        data: {
+        webhooks,
+        event: Webhook.Events.LABEL_UPDATE,
+        buildData: () => ({
           item: label,
           included: {
             projects: [inputs.project],
             boards: [inputs.board],
           },
-        },
-        prevData: {
+        }),
+        buildPrevData: () => ({
           item: inputs.record,
-        },
+        }),
         user: inputs.actorUser,
       });
     }

@@ -1,43 +1,188 @@
-const valuesValidator = (value) => {
-  if (!_.isPlainObject(value)) {
-    return false;
-  }
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
 
-  if (!_.isPlainObject(value.user) && !_.isString(value.userId)) {
-    return false;
-  }
+const escapeMarkdown = require('escape-markdown');
+const escapeHtml = require('escape-html');
 
-  if (!_.isPlainObject(value.action)) {
-    return false;
-  }
+const { mentionMarkupToText } = require('../../../utils/mentions');
 
-  return true;
+const buildTitle = (notification, t) => {
+  switch (notification.type) {
+    case Notification.Types.MOVE_CARD:
+      return t('Card Moved');
+    case Notification.Types.COMMENT_CARD:
+      return t('New Comment');
+    case Notification.Types.ADD_MEMBER_TO_CARD:
+      return t('You Were Added to Card');
+    case Notification.Types.MENTION_IN_COMMENT:
+      return t('You Were Mentioned in Comment');
+    default:
+      return null;
+  }
+};
+
+const buildBodyByFormat = (board, card, notification, actorUser, t) => {
+  const markdownCardLink = `[${escapeMarkdown(card.name)}](${sails.config.custom.baseUrl}/cards/${card.id})`;
+  const htmlCardLink = `<a href="${sails.config.custom.baseUrl}/cards/${card.id}">${escapeHtml(card.name)}</a>`;
+
+  switch (notification.type) {
+    case Notification.Types.MOVE_CARD: {
+      const fromListName = sails.helpers.lists.makeName(notification.data.fromList);
+      const toListName = sails.helpers.lists.makeName(notification.data.toList);
+
+      return {
+        text: t(
+          '%s moved %s from %s to %s on %s',
+          actorUser.name,
+          card.name,
+          fromListName,
+          toListName,
+          board.name,
+        ),
+        markdown: t(
+          '%s moved %s from %s to %s on %s',
+          escapeMarkdown(actorUser.name),
+          markdownCardLink,
+          `**${escapeMarkdown(fromListName)}**`,
+          `**${escapeMarkdown(toListName)}**`,
+          escapeMarkdown(board.name),
+        ),
+        html: t(
+          '%s moved %s from %s to %s on %s',
+          escapeHtml(actorUser.name),
+          htmlCardLink,
+          `<b>${escapeHtml(fromListName)}</b>`,
+          `<b>${escapeHtml(toListName)}</b>`,
+          escapeHtml(board.name),
+        ),
+      };
+    }
+    case Notification.Types.COMMENT_CARD: {
+      const commentText = _.truncate(mentionMarkupToText(notification.data.text));
+
+      return {
+        text: `${t(
+          '%s left a new comment to %s on %s',
+          actorUser.name,
+          card.name,
+          board.name,
+        )}:\n${commentText}`,
+        markdown: `${t(
+          '%s left a new comment to %s on %s',
+          escapeMarkdown(actorUser.name),
+          markdownCardLink,
+          escapeMarkdown(board.name),
+        )}:\n\n*${escapeMarkdown(commentText)}*`,
+        html: `${t(
+          '%s left a new comment to %s on %s',
+          escapeHtml(actorUser.name),
+          htmlCardLink,
+          escapeHtml(board.name),
+        )}:\n\n<i>${escapeHtml(commentText)}</i>`,
+      };
+    }
+    case Notification.Types.ADD_MEMBER_TO_CARD:
+      return {
+        text: t('%s added you to %s on %s', actorUser.name, card.name, board.name),
+        markdown: t(
+          '%s added you to %s on %s',
+          escapeMarkdown(actorUser.name),
+          markdownCardLink,
+          escapeMarkdown(board.name),
+        ),
+        html: t(
+          '%s added you to %s on %s',
+          escapeHtml(actorUser.name),
+          htmlCardLink,
+          escapeHtml(board.name),
+        ),
+      };
+    case Notification.Types.MENTION_IN_COMMENT: {
+      const commentText = _.truncate(mentionMarkupToText(notification.data.text));
+
+      return {
+        text: `${t(
+          '%s mentioned you in %s on %s',
+          actorUser.name,
+          card.name,
+          board.name,
+        )}:\n${commentText}`,
+        markdown: `${t(
+          '%s mentioned you in %s on %s',
+          escapeMarkdown(actorUser.name),
+          markdownCardLink,
+          escapeMarkdown(board.name),
+        )}:\n\n*${escapeMarkdown(commentText)}*`,
+        html: `${t(
+          '%s mentioned you in %s on %s',
+          escapeHtml(actorUser.name),
+          htmlCardLink,
+          escapeHtml(board.name),
+        )}:\n\n<i>${escapeHtml(commentText)}</i>`,
+      };
+    }
+    default:
+      return null;
+  }
+};
+
+const buildAndSendNotifications = async (services, board, card, notification, actorUser, t) => {
+  await sails.helpers.utils.sendNotifications(
+    services,
+    buildTitle(notification, t),
+    buildBodyByFormat(board, card, notification, actorUser, t),
+  );
 };
 
 // TODO: use templates (views) to build html
-const buildAndSendEmail = async (board, card, action, actorUser, notifiableUser) => {
-  let emailData;
-  switch (action.type) {
-    case Action.Types.MOVE_CARD:
-      emailData = {
-        subject: `${actorUser.name} moved ${card.name} from ${action.data.fromList.name} to ${action.data.toList.name} on ${board.name}`,
-        html:
-          `<p>${actorUser.name} moved ` +
-          `<a href="${process.env.BASE_URL}/cards/${card.id}">${card.name}</a> ` +
-          `from ${action.data.fromList.name} to ${action.data.toList.name} ` +
-          `on <a href="${process.env.BASE_URL}/boards/${board.id}">${board.name}</a></p>`,
-      };
+const buildAndSendEmail = async (board, card, notification, actorUser, notifiableUser, t) => {
+  const cardLink = `<a href="${sails.config.custom.baseUrl}/cards/${card.id}">${escapeHtml(card.name)}</a>`;
+  const boardLink = `<a href="${sails.config.custom.baseUrl}/boards/${board.id}">${escapeHtml(board.name)}</a>`;
+
+  let html;
+  switch (notification.type) {
+    case Notification.Types.MOVE_CARD: {
+      const fromListName = sails.helpers.lists.makeName(notification.data.fromList);
+      const toListName = sails.helpers.lists.makeName(notification.data.toList);
+
+      html = `<p>${t(
+        '%s moved %s from %s to %s on %s',
+        escapeHtml(actorUser.name),
+        cardLink,
+        escapeHtml(fromListName),
+        escapeHtml(toListName),
+        boardLink,
+      )}</p>`;
 
       break;
-    case Action.Types.COMMENT_CARD:
-      emailData = {
-        subject: `${actorUser.name} left a new comment to ${card.name} on ${board.name}`,
-        html:
-          `<p>${actorUser.name} left a new comment to ` +
-          `<a href="${process.env.BASE_URL}/cards/${card.id}">${card.name}</a> ` +
-          `on <a href="${process.env.BASE_URL}/boards/${board.id}">${board.name}</a></p>` +
-          `<p>${action.data.text}</p>`,
-      };
+    }
+    case Notification.Types.COMMENT_CARD:
+      html = `<p>${t(
+        '%s left a new comment to %s on %s',
+        escapeHtml(actorUser.name),
+        cardLink,
+        boardLink,
+      )}</p><p>${escapeHtml(notification.data.text)}</p>`;
+
+      break;
+    case Notification.Types.ADD_MEMBER_TO_CARD:
+      html = `<p>${t(
+        '%s added you to %s on %s',
+        escapeHtml(actorUser.name),
+        cardLink,
+        boardLink,
+      )}</p>`;
+
+      break;
+    case Notification.Types.MENTION_IN_COMMENT:
+      html = `<p>${t(
+        '%s mentioned you in %s on %s',
+        escapeHtml(actorUser.name),
+        cardLink,
+        boardLink,
+      )}</p><p>${escapeHtml(notification.data.text)}</p>`;
 
       break;
     default:
@@ -45,8 +190,9 @@ const buildAndSendEmail = async (board, card, action, actorUser, notifiableUser)
   }
 
   await sails.helpers.utils.sendEmail.with({
-    ...emailData,
+    html,
     to: notifiableUser.email,
+    subject: buildTitle(notification, t),
   });
 };
 
@@ -54,7 +200,6 @@ module.exports = {
   inputs: {
     values: {
       type: 'ref',
-      custom: valuesValidator,
       required: true,
     },
     project: {
@@ -69,11 +214,7 @@ module.exports = {
       type: 'ref',
       required: true,
     },
-    card: {
-      type: 'ref',
-      required: true,
-    },
-    actorUser: {
+    webhooks: {
       type: 'ref',
       required: true,
     },
@@ -86,41 +227,84 @@ module.exports = {
       values.userId = values.user.id;
     }
 
-    const notification = await Notification.create({
+    const isCommentRelated =
+      values.type === Notification.Types.COMMENT_CARD ||
+      values.type === Notification.Types.MENTION_IN_COMMENT;
+
+    if (isCommentRelated) {
+      values.commentId = values.comment.id;
+    } else {
+      values.actionId = values.action.id;
+    }
+
+    const notification = await Notification.qm.createOne({
       ...values,
-      actionId: values.action.id,
-      cardId: values.action.cardId,
-    }).fetch();
+      creatorUserId: values.creatorUser.id,
+      boardId: values.card.boardId,
+      cardId: values.card.id,
+    });
 
     sails.sockets.broadcast(`user:${notification.userId}`, 'notificationCreate', {
       item: notification,
+      included: {
+        users: [sails.helpers.users.presentOne(values.creatorUser, {})], // FIXME: hack
+      },
     });
 
-    if (sails.hooks.smtp.isActive()) {
-      let notifiableUser;
-      if (values.user) {
-        notifiableUser = values.user;
-      } else {
-        notifiableUser = await sails.helpers.users.getOne(notification.userId);
-      }
-
-      buildAndSendEmail(inputs.board, inputs.card, values.action, inputs.actorUser, notifiableUser);
-    }
-
     sails.helpers.utils.sendWebhooks.with({
-      event: 'notificationCreate',
-      data: {
+      webhooks: inputs.webhooks,
+      event: Webhook.Events.NOTIFICATION_CREATE,
+      buildData: () => ({
         item: notification,
         included: {
           projects: [inputs.project],
           boards: [inputs.board],
           lists: [inputs.list],
-          cards: [inputs.card],
-          actions: [values.action],
+          cards: [values.card],
+          ...(isCommentRelated
+            ? {
+                comments: [values.comment],
+              }
+            : {
+                actions: [values.action],
+              }),
         },
-      },
-      user: inputs.actorUser,
+      }),
+      user: values.creatorUser,
     });
+
+    const notificationServices = await NotificationService.qm.getByUserId(notification.userId);
+
+    if (notificationServices.length > 0 || sails.hooks.smtp.isEnabled()) {
+      const notifiableUser = values.user || (await User.qm.getOneById(notification.userId));
+      const t = sails.helpers.utils.makeTranslator(notifiableUser.language);
+
+      if (notificationServices.length > 0) {
+        const services = notificationServices.map((notificationService) =>
+          _.pick(notificationService, ['url', 'format']),
+        );
+
+        buildAndSendNotifications(
+          services,
+          inputs.board,
+          values.card,
+          notification,
+          values.creatorUser,
+          t,
+        );
+      }
+
+      if (sails.hooks.smtp.isEnabled()) {
+        buildAndSendEmail(
+          inputs.board,
+          values.card,
+          notification,
+          values.creatorUser,
+          notifiableUser,
+          t,
+        );
+      }
+    }
 
     return notification;
   },

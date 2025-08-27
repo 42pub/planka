@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 import ActionTypes from '../constants/ActionTypes';
 
 const initializeLogin = (config) => ({
@@ -21,29 +26,31 @@ authenticate.success = (accessToken) => ({
   },
 });
 
-authenticate.failure = (error) => ({
+authenticate.failure = (error, terms) => ({
   type: ActionTypes.AUTHENTICATE__FAILURE,
   payload: {
     error,
+    terms,
   },
 });
 
-const authenticateUsingOidc = () => ({
-  type: ActionTypes.USING_OIDC_AUTHENTICATE,
+const authenticateWithOidc = () => ({
+  type: ActionTypes.WITH_OIDC_AUTHENTICATE,
   payload: {},
 });
 
-authenticateUsingOidc.success = (accessToken) => ({
-  type: ActionTypes.USING_OIDC_AUTHENTICATE__SUCCESS,
+authenticateWithOidc.success = (accessToken) => ({
+  type: ActionTypes.WITH_OIDC_AUTHENTICATE__SUCCESS,
   payload: {
     accessToken,
   },
 });
 
-authenticateUsingOidc.failure = (error) => ({
-  type: ActionTypes.USING_OIDC_AUTHENTICATE__FAILURE,
+authenticateWithOidc.failure = (error, terms) => ({
+  type: ActionTypes.WITH_OIDC_AUTHENTICATE__FAILURE,
   payload: {
     error,
+    terms,
   },
 });
 
@@ -52,9 +59,71 @@ const clearAuthenticateError = () => ({
   payload: {},
 });
 
+const acceptTerms = (signature) => ({
+  type: ActionTypes.TERMS_ACCEPT,
+  payload: {
+    signature,
+  },
+});
+
+acceptTerms.success = (accessToken) => ({
+  type: ActionTypes.TERMS_ACCEPT__SUCCESS,
+  payload: {
+    accessToken,
+  },
+});
+
+acceptTerms.failure = (error) => ({
+  type: ActionTypes.TERMS_ACCEPT__FAILURE,
+  payload: {
+    error,
+  },
+});
+
+const cancelTerms = () => ({
+  type: ActionTypes.TERMS_CANCEL,
+  payload: {},
+});
+
+cancelTerms.success = () => ({
+  type: ActionTypes.TERMS_CANCEL__SUCCESS,
+  payload: {},
+});
+
+cancelTerms.failure = (error) => ({
+  type: ActionTypes.TERMS_CANCEL__FAILURE,
+  payload: {
+    error,
+  },
+});
+
+const updateTermsLanguage = (value) => ({
+  type: ActionTypes.TERMS_LANGUAGE_UPDATE,
+  payload: {
+    value,
+  },
+});
+
+updateTermsLanguage.success = (terms) => ({
+  type: ActionTypes.TERMS_LANGUAGE_UPDATE__SUCCESS,
+  payload: {
+    terms,
+  },
+});
+
+updateTermsLanguage.failure = (error) => ({
+  type: ActionTypes.TERMS_LANGUAGE_UPDATE__FAILURE,
+  payload: {
+    error,
+  },
+});
+
 export default {
   initializeLogin,
   authenticate,
-  authenticateUsingOidc,
+  authenticateWithOidc,
   clearAuthenticateError,
+  acceptTerms,
+  cancelTerms,
+  updateTermsLanguage,
 };

@@ -1,3 +1,8 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
 /**
  * Action.js
  *
@@ -8,11 +13,21 @@
 const Types = {
   CREATE_CARD: 'createCard',
   MOVE_CARD: 'moveCard',
-  COMMENT_CARD: 'commentCard',
+  ADD_MEMBER_TO_CARD: 'addMemberToCard',
+  REMOVE_MEMBER_FROM_CARD: 'removeMemberFromCard',
+  COMPLETE_TASK: 'completeTask',
+  UNCOMPLETE_TASK: 'uncompleteTask',
 };
+
+const INTERNAL_NOTIFIABLE_TYPES = [Types.MOVE_CARD, Types.ADD_MEMBER_TO_CARD];
+const EXTERNAL_NOTIFIABLE_TYPES = [Types.CREATE_CARD, Types.MOVE_CARD];
+const PERSONAL_NOTIFIABLE_TYPES = [Types.ADD_MEMBER_TO_CARD];
 
 module.exports = {
   Types,
+  INTERNAL_NOTIFIABLE_TYPES,
+  EXTERNAL_NOTIFIABLE_TYPES,
+  PERSONAL_NOTIFIABLE_TYPES,
 
   attributes: {
     //  ╔═╗╦═╗╦╔╦╗╦╔╦╗╦╦  ╦╔═╗╔═╗
@@ -37,6 +52,10 @@ module.exports = {
     //  ╠═╣╚═╗╚═╗║ ║║  ║╠═╣ ║ ║║ ║║║║╚═╗
     //  ╩ ╩╚═╝╚═╝╚═╝╚═╝╩╩ ╩ ╩ ╩╚═╝╝╚╝╚═╝
 
+    boardId: {
+      model: 'Board',
+      columnName: 'board_id',
+    },
     cardId: {
       model: 'Card',
       required: true,
@@ -44,7 +63,6 @@ module.exports = {
     },
     userId: {
       model: 'User',
-      required: true,
       columnName: 'user_id',
     },
   },

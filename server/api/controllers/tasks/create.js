@@ -1,26 +1,42 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
+const { idInput } = require('../../../utils/inputs');
+
 const Errors = {
   NOT_ENOUGH_RIGHTS: {
     notEnoughRights: 'Not enough rights',
   },
-  CARD_NOT_FOUND: {
-    cardNotFound: 'Card not found',
+  TASK_LIST_NOT_FOUND: {
+    taskListNotFound: 'Task list not found',
+  },
+  LINKED_CARD_NOT_FOUND: {
+    linkedCardNotFound: 'Linked card not found',
+  },
+  LINKED_CARD_OR_NAME_MUST_BE_PRESENT: {
+    linkedCardOrNameMustBePresent: 'Linked card or name must be present',
   },
 };
 
 module.exports = {
   inputs: {
-    cardId: {
-      type: 'string',
-      regex: /^[0-9]+$/,
+    taskListId: {
+      ...idInput,
       required: true,
     },
+    linkedCardId: idInput,
     position: {
       type: 'number',
+      min: 0,
       required: true,
     },
     name: {
       type: 'string',
-      required: true,
+      isNotEmptyString: true,
+      maxLength: 1024,
+      allowNull: true,
     },
     isCompleted: {
       type: 'boolean',
@@ -31,44 +47,84 @@ module.exports = {
     notEnoughRights: {
       responseType: 'forbidden',
     },
-    cardNotFound: {
+    taskListNotFound: {
       responseType: 'notFound',
+    },
+    linkedCardNotFound: {
+      responseType: 'notFound',
+    },
+    linkedCardOrNameMustBePresent: {
+      responseType: 'unprocessableEntity',
     },
   },
 
   async fn(inputs) {
     const { currentUser } = this.req;
 
-    const { card, list, board, project } = await sails.helpers.cards
-      .getProjectPath(inputs.cardId)
-      .intercept('pathNotFound', () => Errors.CARD_NOT_FOUND);
+    const { taskList, card, list, board, project } = await sails.helpers.taskLists
+      .getPathToProjectById(inputs.taskListId)
+      .intercept('pathNotFound', () => Errors.TASK_LIST_NOT_FOUND);
 
-    const boardMembership = await BoardMembership.findOne({
-      boardId: board.id,
-      userId: currentUser.id,
-    });
+    let boardMembership = await BoardMembership.qm.getOneByBoardIdAndUserId(
+      board.id,
+      currentUser.id,
+    );
 
     if (!boardMembership) {
-      throw Errors.CARD_NOT_FOUND; // Forbidden
+      throw Errors.TASK_LIST_NOT_FOUND; // Forbidden
     }
 
     if (boardMembership.role !== BoardMembership.Roles.EDITOR) {
       throw Errors.NOT_ENOUGH_RIGHTS;
     }
 
+    let linkedCard;
+    if (!_.isUndefined(inputs.linkedCardId)) {
+      const path = await sails.helpers.cards
+        .getPathToProjectById(inputs.linkedCardId)
+        .intercept('pathNotFound', () => Errors.LINKED_CARD_NOT_FOUND);
+
+      ({ card: linkedCard } = path);
+
+      if (currentUser.role !== User.Roles.ADMIN || path.project.ownerProjectManagerId) {
+        const isProjectManager = await sails.helpers.users.isProjectManager(
+          currentUser.id,
+          path.project.id,
+        );
+
+        if (!isProjectManager) {
+          boardMembership = await BoardMembership.qm.getOneByBoardIdAndUserId(
+            linkedCard.boardId,
+            currentUser.id,
+          );
+
+          if (!boardMembership) {
+            throw Errors.LINKED_CARD_NOT_FOUND; // Forbidden
+          }
+        }
+      }
+    }
+
     const values = _.pick(inputs, ['position', 'name', 'isCompleted']);
 
-    const task = await sails.helpers.tasks.createOne.with({
-      project,
-      board,
-      list,
-      values: {
-        ...values,
+    const task = await sails.helpers.tasks.createOne
+      .with({
+        project,
+        board,
+        list,
         card,
-      },
-      actorUser: currentUser,
-      request: this.req,
-    });
+        values: {
+          ...values,
+          taskList,
+          linkedCard,
+        },
+        actorUser: currentUser,
+        request: this.req,
+      })
+      .intercept(
+        'linkedCardOrNameMustBeInValues',
+        () => Errors.LINKED_CARD_OR_NAME_MUST_BE_PRESENT,
+      );
 
     return {
       item: task,
