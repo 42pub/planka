@@ -87,7 +87,7 @@ exports.up = async (knex) => {
       id: avatar.uploadedFileId,
       type: 'userAvatar',
       referencesTotal: 1,
-      mimeType: mime.getType(avatar.extension),
+      mimeType: mime.lookup(avatar.extension),
       size: avatar.size,
     })),
   );
@@ -100,7 +100,7 @@ exports.up = async (knex) => {
       id: backgroundImage.uploaded_file_id,
       type: 'backgroundImage',
       referencesTotal: 1,
-      mimeType: mime.getType(backgroundImage.extension),
+      mimeType: mime.lookup(backgroundImage.extension),
       size: backgroundImage.size,
       createdAt: backgroundImage.created_at,
     })),
