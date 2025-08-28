@@ -52,7 +52,7 @@ exports.up = async (knex) => {
 
   await knex.raw(`
     UPDATE user_account
-    SET avatar = avatar - 'dirname' - 'sizeInBytes' || jsonb_build_object('uploadedFileId', avatar->'dirname', 'size', avatar->'sizeInBytes')
+    SET avatar = avatar - 'dirname' - 'sizeInBytes' || jsonb_build_object('uploadedFileId', avatar->'dirname', 'size', COALESCE(avatar->'sizeInBytes', '0'))
     WHERE avatar IS NOT NULL;
   `);
 
@@ -88,7 +88,7 @@ exports.up = async (knex) => {
       type: 'userAvatar',
       referencesTotal: 1,
       mimeType: mime.getType(avatar.extension),
-      size: avatar.size,
+      size: avatar.size || 0,
     })),
   );
 
@@ -144,7 +144,7 @@ exports.down = async (knex) => {
 
   await knex.raw(`
     UPDATE user_account
-    SET avatar = avatar - 'uploadedFileId' - 'size' || jsonb_build_object('dirname', avatar->'uploadedFileId', 'sizeInBytes', avatar->'size')
+    SET avatar = avatar - 'uploadedFileId' - 'size' || jsonb_build_object('dirname', avatar->'uploadedFileId', 'sizeInBytes', COALESCE(avatar->'size', '0'))
     WHERE avatar IS NOT NULL;
   `);
 
