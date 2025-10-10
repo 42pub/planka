@@ -33,6 +33,7 @@ module.exports = {
       isNotEmptyString: true,
       allowNull: true,
       columnName: 'http_only_token',
+      unique: true,
     },
     remoteAddress: {
       type: 'string',
