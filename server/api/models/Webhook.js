@@ -10,6 +10,67 @@
  * @docs        :: https://sailsjs.com/docs/concepts/models-and-orm/models
  */
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Webhook:
+ *       type: object
+ *       required:
+ *         - id
+ *         - name
+ *         - url
+ *         - accessToken
+ *         - events
+ *         - excludedEvents
+ *         - createdAt
+ *         - updatedAt
+ *       properties:
+ *         id:
+ *           type: string
+ *           description: Unique identifier for the webhook
+ *           example: "1357158568008091264"
+ *         name:
+ *           type: string
+ *           description: Name/title of the webhook
+ *           example: Webhook Updates
+ *         url:
+ *           type: string
+ *           description: URL endpoint for the webhook
+ *           example: https://webhook.example.com/planka
+ *         accessToken:
+ *           type: string
+ *           nullable: true
+ *           description: Access token for webhook authentication
+ *           example: secret_token_123
+ *         events:
+ *           type: array
+ *           nullable: true
+ *           description: List of events that trigger the webhook
+ *           items:
+ *             type: string
+ *           example: [cardCreate, cardUpdate, cardDelete]
+ *         excludedEvents:
+ *           type: array
+ *           nullable: true
+ *           description: List of events excluded from the webhook
+ *           items:
+ *             type: string
+ *           example: [userCreate, userUpdate, userDelete]
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           description: When the webhook was created
+ *           example: 2024-01-01T00:00:00.000Z
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           description: When the webhook was last updated
+ *           example: 2024-01-01T00:00:00.000Z
+ */
+
 const Events = {
   ACTION_CREATE: 'actionCreate',
 
@@ -45,6 +106,8 @@ const Events = {
   COMMENT_CREATE: 'commentCreate',
   COMMENT_UPDATE: 'commentUpdate',
   COMMENT_DELETE: 'commentDelete',
+
+  CONFIG_UPDATE: 'configUpdate',
 
   CUSTOM_FIELD_CREATE: 'customFieldCreate',
   CUSTOM_FIELD_UPDATE: 'customFieldUpdate',
