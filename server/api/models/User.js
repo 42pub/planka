@@ -410,6 +410,15 @@ module.exports = {
       via: 'userId',
       through: 'CardMembership',
     },
+
+    //////////////////////// CUSTOM
+    linkedTelegramAccount: {
+      type: 'string',
+      isNotEmptyString: true,
+      allowNull: true,
+      columnName: 'linked_telegram_account',
+      unique: true
+    },
   },
 
   tableName: 'user_account',
