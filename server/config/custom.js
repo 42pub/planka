@@ -16,18 +16,19 @@ const version = require('../version');
 
 const envToNumber = (value) => {
   if (!value) {
-    return value;
+    return null;
   }
 
   const number = parseInt(value, 10);
   return Number.isNaN(number) ? null : number;
 };
 
-const envToBytes = (value) => value && bytes(value);
+const envToBytes = (value) => bytes(value);
 
 const envToArray = (value) => (value ? value.split(',') : []);
 
-const parsedBasedUrl = new URL(process.env.BASE_URL);
+const baseUrl = envToArray(process.env.BASE_URL)[0];
+const parsedBasedUrl = new URL(baseUrl);
 
 module.exports.custom = {
   /**
@@ -38,7 +39,7 @@ module.exports.custom = {
 
   version,
 
-  baseUrl: process.env.BASE_URL,
+  baseUrl,
   baseUrlPath: parsedBasedUrl.pathname,
   baseUrlSecure: parsedBasedUrl.protocol === 'https:',
 
@@ -94,15 +95,17 @@ module.exports.custom = {
 
   // TODO: move client base url to environment variable?
   oidcRedirectUri: `${
-    sails.config.environment === 'production' ? process.env.BASE_URL : 'http://localhost:3000'
+    sails.config.environment === 'production' ? baseUrl : 'http://localhost:3000'
   }/oidc-callback`,
 
   smtpHost: process.env.SMTP_HOST,
   smtpPort: process.env.SMTP_PORT || 587,
   smtpName: process.env.SMTP_NAME,
   smtpSecure: process.env.SMTP_SECURE === 'true',
+  smtpTlsRejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== 'false',
   smtpUser: process.env.SMTP_USER,
   smtpPassword: process.env.SMTP_PASSWORD,
   smtpFrom: process.env.SMTP_FROM,
-  smtpTlsRejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== 'false',
+
+  gravatarBaseUrl: process.env.GRAVATAR_BASE_URL,
 };

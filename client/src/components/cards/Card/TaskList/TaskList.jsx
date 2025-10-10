@@ -8,7 +8,7 @@ import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import { useSelector } from 'react-redux';
 import { Progress } from 'semantic-ui-react';
-import { useToggle } from '../../../../lib/hooks';
+import { useDidUpdate, useToggle } from '../../../../lib/hooks';
 
 import selectors from '../../../../selectors';
 import Task from './Task';
@@ -22,7 +22,11 @@ const TaskList = React.memo(({ id }) => {
   const taskLists = useSelector((state) => selectTaskListById(state, id));
   const tasks = useSelector((state) => selectTasksByTaskListId(state, id));
 
-  const [isOpened, toggleOpened] = useToggle();
+  const defaultIsOpened = useSelector(
+    (state) => selectors.selectCurrentBoard(state).expandTaskListsByDefault,
+  );
+
+  const [isOpened, toggleOpened] = useToggle(defaultIsOpened);
 
   const filteredTasks = useMemo(
     () => (taskLists.hideCompletedTasks ? tasks.filter((task) => !task.isCompleted) : tasks),
@@ -46,6 +50,10 @@ const TaskList = React.memo(({ id }) => {
     },
     [toggleOpened, filteredTasks.length],
   );
+
+  useDidUpdate(() => {
+    toggleOpened();
+  }, [defaultIsOpened]);
 
   if (tasks.length === 0) {
     return null;

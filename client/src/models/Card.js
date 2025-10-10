@@ -19,6 +19,7 @@ export default class extends BaseModel {
     name: attr(),
     description: attr(),
     dueDate: attr(),
+    isDueCompleted: attr(),
     stopwatch: attr(),
     isClosed: attr(),
     commentsTotal: attr({
@@ -88,6 +89,7 @@ export default class extends BaseModel {
       case ActionTypes.PROJECT_UPDATE_HANDLE:
       case ActionTypes.PROJECT_MANAGER_CREATE_HANDLE:
       case ActionTypes.BOARD_MEMBERSHIP_CREATE_HANDLE:
+      case ActionTypes.LIST_UPDATE_HANDLE:
         if (payload.cards) {
           payload.cards.forEach((card) => {
             Card.upsert(card);
@@ -320,6 +322,16 @@ export default class extends BaseModel {
         } else {
           if (payload.data.listId && payload.data.listId !== cardModel.listId) {
             payload.data.listChangedAt = new Date(); // eslint-disable-line no-param-reassign
+          }
+
+          if (payload.data.dueDate !== undefined) {
+            if (payload.data.dueDate) {
+              if (!cardModel.dueDate) {
+                payload.data.isDueCompleted = false; // eslint-disable-line no-param-reassign
+              }
+            } else {
+              payload.data.isDueCompleted = null; // eslint-disable-line no-param-reassign
+            }
           }
 
           if (payload.data.isClosed !== undefined && payload.data.isClosed !== cardModel.isClosed) {
@@ -567,6 +579,7 @@ export default class extends BaseModel {
       name: this.name,
       description: this.description,
       dueDate: this.dueDate,
+      isDueCompleted: this.isDueCompleted,
       stopwatch: this.stopwatch,
       isClosed: this.isClosed,
       ...data,
