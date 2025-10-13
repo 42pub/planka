@@ -215,6 +215,11 @@ module.exports = {
       type: 'ref',
       columnName: 'terms_accepted_at',
     },
+    linkedTelegramAccount: {
+      type: 'string',
+      allowNull: true,
+      columnName: 'linked_telegram_account',
+    },
 
     //  ╔═╗╔╦╗╔╗ ╔═╗╔╦╗╔═╗
     //  ║╣ ║║║╠╩╗║╣  ║║╚═╗
