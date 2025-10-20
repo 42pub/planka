@@ -40,6 +40,13 @@ module.exports = {
 
     values.position = position;
 
+    // Ensure new boards always have a defined value for the
+    // `expand_task_lists_by_default` flag so DB inserts don't fail when
+    // the column is NOT NULL. Default to false when caller didn't set it.
+    if (typeof values.expand_task_lists_by_default === 'undefined' || values.expand_task_lists_by_default === null) {
+      values.expand_task_lists_by_default = false;
+    }
+
     if (repositions.length > 0) {
       await scoper.getUserIdsWithFullProjectVisibility();
       const clonedScoper = scoper.clone();
